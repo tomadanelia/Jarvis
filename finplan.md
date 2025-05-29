@@ -1,0 +1,608 @@
+# Robot Task Simulation: Development Blueprint & Iterative Prompts
+
+This document outlines a detailed, step-by-step plan for building the Robot Task Simulation project, broken down into iterative chunks suitable for test-driven development.
+
+## I. Detailed Blueprint & Iterative Chunks
+
+This blueprint focuses on building the backend first, establishing core logic and APIs, then integrating the frontend, and finally adding WebSockets for real-time updates.
+
+**Phase 0: Project Setup & Core Definitions**
+
+1.  **P0.1: Monorepo Setup (Optional but Recommended):**
+    *   Initialize a monorepo (e.g., using `npm workspaces`, `yarn workspaces`, `pnpm`, or `Nx`).
+    *   Create `backend` and `frontend` packages.
+    *   Create a `common` (or `shared`) package for shared TypeScript interfaces (Cell, Task, Robot).
+2.  **P0.2: Backend Project Initialization:**
+    *   Inside `backend`, setup Node.js with TypeScript.
+    *   Install Express, `cors`, `dotenv`.
+    *   Setup `tsconfig.json`, linters (ESLint), formatters (Prettier).
+    *   Basic Express app structure (e.g., `src/index.ts`, `src/app.ts`).
+3.  **P0.3: Frontend Project Initialization:**
+    *   Inside `frontend`, setup React with TypeScript (e.g., using Vite or Create React App).
+    *   Setup `tsconfig.json`, linters, formatters.
+4.  **P0.4: Supabase Project Setup:**
+    *   Create a new Supabase project.
+    *   Define the `grids` table schema (id, name, layout, created\_at) using Supabase Studio SQL editor or migrations.
+    *   Get Supabase URL and Anon Key for backend configuration.
+5.  **P0.5: Shared Type Definitions:**
+    *   In `common/src/types.ts` (or similar), define `Cell`, `Coordinates`, `Task`, `Robot` interfaces as per the spec.
+    *   Ensure backend and frontend can import these.
+
+**Phase 1: Backend - Core Simulation Logic & Static APIs (No Simulation Loop Yet)**
+
+1.  **B1.1: Core Entity Data Structures (Backend):**
+    *   Refine `Robot` and `Task` interfaces in `backend/src/types/` or import from `common`. Add any backend-specific internal properties if needed (though aim to keep them aligned).
+    *   Define constants (e.g., `ROBOT_MAX_BATTERY`, `TASK_WORK_DURATION`).
+2.  **B1.2: Supabase Service (`SupabaseService`):**
+    *   Create `backend/src/services/supabaseService.ts`.
+    *   Initialize Supabase client.
+    *   Implement `getGrids(): Promise<GridDefinition[]>` and `getGridById(id: string): Promise<GridDefinition | null>`.
+    *   Unit tests mocking the Supabase client.
+3.  **B1.3: Grid API Endpoints:**
+    *   Create `backend/src/routes/gridRoutes.ts` and `backend/src/controllers/gridController.ts`.
+    *   Implement `GET /api/grids` and `GET /api/grids/:id` using `SupabaseService`.
+    *   Integration tests for these endpoints (using `supertest`).
+4.  **B1.4: Simulation State Manager (`SimulationStateService` - In-Memory):**
+    *   Create `backend/src/services/simulationStateService.ts`. This service will manage the *current* simulation's state (selected grid, robots, tasks, strategy, status). Initially, it's a singleton holding this data in memory.
+    *   Methods:
+        *   `initializeCurrentSimulation(gridName: string, gridLayout: Cell[][], strategy: 'nearest' | 'round-robin' | null)`
+        *   `addRobot(location: Coordinates, iconType: string): Robot | null` (generates ID, validates placement on current grid).
+        *   `addTask(location: Coordinates): Task | null` (generates ID, validates placement).
+        *   `setStrategy(strategy: 'nearest' | 'round-robin')`
+        *   `getRobots(): Robot[]`, `getTasks(): Task[]`, `getCurrentGrid(): Cell[][] | null`, `getCurrentGridName(): string | null`, `getSelectedStrategy(): string | null`, `getSimulationStatus(): 'idle' | 'running' | 'paused'`.
+        *   `resetSimulationState()`: Resets robots to initial state, tasks to unassigned, status to idle, keeps placements and grid.
+    *   Unit tests for each method, especially placement validation (needs grid data).
+5.  **B1.5: Simulation Setup API Endpoints:**
+    *   Create `backend/src/routes/simulationSetupRoutes.ts` (or similar) and `backend/src/controllers/simulationController.ts`.
+    *   `POST /api/simulation/setup`: Calls `simulationStateService.initializeCurrentSimulation()` (after fetching grid details).
+    *   `POST /api/simulation/robots`: Calls `simulationStateService.addRobot()`.
+    *   `POST /api/simulation/tasks`: Calls `simulationStateService.addTask()`.
+    *   `POST /api/simulation/strategy`: Calls `simulationStateService.setStrategy()`.
+    *   `POST /api/simulation/reset-setup`: Calls `simulationStateService.resetSimulationState()`.
+    *   Integration tests for these endpoints.
+6.  **B1.6: Pathfinding Service (`PathfindingService` - A*):**
+    *   Create `backend/src/services/pathfindingService.ts`.
+    *   Implement A* algorithm: `findPath(grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] | null`.
+    *   Unit tests with various grid layouts, obstacles, unreachable targets.
+
+**Phase 2: Frontend - Basic Setup & API Integration**
+
+1.  **F2.1: API Service (`apiService.ts`):**
+    *   Create `frontend/src/services/apiService.ts`.
+    *   Implement functions to call backend APIs: `fetchGrids()`, `fetchGridById()`, `setupSimulation()`, `placeRobot()`, `placeTask()`, `selectStrategy()`, `resetSetup()`.
+2.  **F2.2: State Management (e.g., Zustand or Context/Reducer):**
+    *   Setup basic store for: `availableGrids`, `selectedGridId`, `selectedGridLayout`, `placedRobots`, `placedTasks`, `selectedStrategy`, `simulationStatus` (from backend), `errorMessages`.
+3.  **F2.3: Grid Selection UI:**
+    *   Component `GridSelector.tsx`: Fetches grids using `apiService`, displays dropdown. On selection, calls `apiService.setupSimulation(gridId, currentStrategy)` and updates `selectedGridId`, `selectedGridLayout` in store.
+    *   Component `GridDisplay.tsx`: Takes `Cell[][]` as prop and renders it (simple colored divs for now). Also displays `placedRobots` and `placedTasks` from store.
+    *   Wire `GridSelector` to fetch and display grid layout in `GridDisplay`.
+4.  **F2.4: Item Placement UI:**
+    *   Buttons "Place Robot", "Place Task". Mode state in UI store.
+    *   `GridDisplay` onClick: if in placement mode and a grid is selected, calls `apiService.placeRobot/Task`. Backend validates.
+    *   On successful placement (API returns new robot/task), update `placedRobots`/`placedTasks` in store.
+5.  **F2.5: Strategy Selection UI:**
+    *   Dropdown to select strategy. On change, calls `apiService.selectStrategy()`. Update `selectedStrategy` in store.
+
+**Phase 3: Backend - Simulation Engine & Core Loop**
+
+1.  **B3.1: Robot Controller Logic (within `SimulationStateService` or separate `RobotService`):**
+    *   Logic for robot state transitions (`idle`, `en_route_to_task`, etc.).
+    *   `moveRobot(robot: Robot)`: If `currentPath` exists, move one step, update `currentLocation`, consume battery.
+    *   `startPerformingTask(robot: Robot, task: Task)`: Update statuses, deduct `batteryCostToPerform`.
+    *   `workOnTask(robot: Robot, task: Task)`: If `performing_task`, decrement internal work counter for task on robot. If counter done, complete task.
+    *   Battery management: `deductBatteryForMovement()`, `deductBatteryForTask()`.
+    *   Unit tests for these actions.
+2.  **B3.2: Task Controller Logic (within `SimulationStateService` or separate `TaskService`):**
+    *   Logic for task state transitions (`unassigned`, `assigned`, etc.).
+    *   Unit tests.
+3.  **B3.3: Simulation Engine Service (`SimulationEngineService`):**
+    *   Create `backend/src/services/simulationEngineService.ts`.
+    *   Constructor takes `SimulationStateService` and `PathfindingService`.
+    *   `step()`: The core simulation tick function.
+        *   Iterate robots (get from `SimulationStateService`):
+            *   Handle movement.
+            *   Handle task performance duration.
+            *   Handle charging duration.
+            *   Implement collision/yielding logic (based on robot IDs).
+            *   Implement deadlock prevention (re-path after N waits).
+    *   `startSimulation()`: Sets `simulationStateService.simulationStatus` to `running`, starts a `setInterval` to call `step()` at configured speed.
+    *   `pauseSimulation()`: Clears interval, sets status to `paused`.
+    *   `resumeSimulation()`: Sets status to `running`, restarts interval.
+    *   `setSimulationSpeed(factor: number)`: Adjusts interval delay.
+    *   `getMetrics()`: Calculate `totalTime`, `totalRecharges`.
+    *   Unit tests for `step()` under various scenarios (mocking dependencies).
+4.  **B3.4: Task Assignment Service (`TaskAssignmentService`):**
+    *   Create `backend/src/services/taskAssignmentService.ts`.
+    *   Constructor takes `SimulationStateService`, `PathfindingService`.
+    *   `assignTasksOnInit()`: Implements initial assignment for "Nearest" and "Round-Robin" based on current robots, tasks, and strategy in `SimulationStateService`. Updates robot/task states directly in `SimulationStateService`.
+    *   `assignTaskToIdleRobot(idleRobot: Robot)`: For ongoing "Nearest".
+    *   `assignTaskFromQueue(nextRobotIndexForRoundRobin: number)`: For ongoing "Round-Robin", finds an unassigned task and the next available robot.
+    *   Helper: `isRobotAvailableForTask(robot: Robot, task: Task, pathToTask: Coordinates[])`.
+    *   Unit tests for both strategies under different conditions.
+5.  **B3.5: Integrate Task Assignment into `SimulationEngineService` & `SimulationStateService`:**
+    *   `SimulationEngineService.startSimulation()`: Call `taskAssignmentService.assignTasksOnInit()`. Also, reset relevant simulation engine state (like current sim time).
+    *   `SimulationEngineService.step()`: When a robot becomes `idle` (after task or charging):
+        *   Check if needs charging. If yes, find path to charger, update robot's target/path/status in `SimulationStateService`.
+        *   Else, try to assign a new task using `TaskAssignmentService`.
+    *   The `TaskAssignmentService` methods will directly modify the `Robot` and `Task` objects held by `SimulationStateService`.
+6.  **B3.6: Charging Logic (in Robot Controller methods / `SimulationEngineService.step()`):**
+    *   Decision to charge (battery < 20% and idle).
+    *   Find nearest charging station (using `PathfindingService` and `SimulationStateService.getCurrentGrid()`).
+    *   Update robot status to `en_route_to_charger`, set `currentTarget`, calculate `currentPath`.
+    *   When at charger, status to `charging`.
+    *   Increment battery during `charging` status over fixed steps.
+    *   Status `idle` when full.
+7.  **B3.7: Simulation Control API Endpoints:**
+    *   In `simulationSetupRoutes.ts` / `simulationController.ts`:
+        *   `POST /api/simulation/control/start`: Calls `simulationEngineService.startSimulation()`.
+        *   `POST /api/simulation/control/pause`: Calls `simulationEngineService.pauseSimulation()`.
+        *   `POST /api/simulation/control/resume`: Calls `simulationEngineService.resumeSimulation()`.
+        *   `POST /api/simulation/control/reset`:
+            *   Calls `simulationEngineService.pauseSimulation()` (to stop the loop).
+            *   Calls `simulationStateService.resetSimulationState()`.
+            *   (Simulation engine's internal time/step counter should also be reset).
+        *   `POST /api/simulation/control/speed`: Calls `simulationEngineService.setSimulationSpeed()`.
+    *   Integration tests for these control endpoints.
+
+**Phase 4: WebSocket Integration**
+
+1.  **B4.1: WebSocket Setup (Backend - `socket.io`):**
+    *   Install `socket.io`.
+    *   Create `backend/src/services/webSocketManager.ts`.
+    *   Initialize `socket.io` server, attach to HTTP server.
+    *   Handle `connection` event:
+        *   On new connection, gather full current state from `SimulationStateService` (grid, robots, tasks, status, strategy, simTime) and emit `initial_state`.
+        *   Store connected clients.
+    *   Methods: `broadcastSimulationUpdate(statePayload)`, `broadcastSimulationEnded(metricsPayload)`, `broadcastError(messagePayload)`, `broadcastInitialState(socket, statePayload)`.
+2.  **B4.2: Integrate WebSocket Broadcasting into Backend Services:**
+    *   `SimulationStateService`: After `addRobot`, `addTask`, `resetSimulationState`, `initializeCurrentSimulation`, `setStrategy`, call `webSocketManager` to broadcast the updated `initial_state` to all clients (or a more specific setup_changed event).
+    *   `SimulationEngineService`:
+        *   In `step()` loop, after all updates for the step, gather current state (robots, tasks, simTime, metrics) from `SimulationStateService` and call `webSocketManager.broadcastSimulationUpdate()`.
+        *   When simulation ends (all tasks completed), gather final metrics and call `webSocketManager.broadcastSimulationEnded()`.
+3.  **F4.1: WebSocket Client Setup (Frontend - `socket.io-client`):**
+    *   Install `socket.io-client`.
+    *   Create `frontend/src/services/webSocketService.ts`.
+    *   Connect to backend WebSocket server.
+    *   Listen for `initial_state`, `simulation_update`, `simulation_ended`, `error_message`.
+    *   On receiving events, update the frontend state store (Zustand/Context).
+4.  **F4.2: Frontend Dynamic Updates:**
+    *   Ensure `GridDisplay`, `RobotList`, `TaskList` components re-render based on state changes driven by WebSocket messages.
+    *   Display simulation time and metrics from the `simulation_update` payload.
+
+**Phase 5: Frontend Polish & Advanced Visuals**
+
+1.  **F5.1: Robot Icon Rendering & Movement Animation:**
+    *   Use actual PNGs for robots (store in `public/assets` or similar).
+    *   Animate robot movement smoothly between cells (e.g., CSS transitions on position, or a simple tweening logic if state updates are frequent enough).
+    *   Display low battery indicator on robot icon.
+2.  **F5.2: Task Visuals:**
+    *   Distinct icons for tasks (e.g., dot, target symbol).
+    *   Spinning cogwheel (e.g., CSS animation or a small SVG icon) for `in_progress` tasks.
+3.  **F5.3: Information Display Panel:**
+    *   Component `InfoPanel.tsx` to list robots: ID, icon, battery (as text/bar), current target/status.
+4.  **F5.4: Control Panel Functionality:**
+    *   Wire up Start, Pause, Resume, Reset, Slower/Faster buttons in `ControlPanel.tsx` to call respective backend APIs (via `apiService.ts`).
+    *   UI should reflect simulation status from store (e.g., disable Start when running, change Start to Pause/Resume).
+
+**Phase 6: Finalizing & Metrics Storage**
+
+1.  **B6.1: Storing Simulation Results (Supabase):**
+    *   Define `simulation_results` table in Supabase (id, grid\_id, strategy\_used, completion\_time\_steps, total\_recharges, num\_robots, num\_tasks, run\_at).
+    *   In `SupabaseService`, add `saveSimulationResult(resultData)`.
+    *   In `SimulationEngineService`, when simulation ends, gather necessary data and call `supabaseService.saveSimulationResult()`.
+2.  **B6.2: Error Handling Improvements:**
+    *   Robust error handling in backend API controllers (try-catch, send appropriate HTTP status codes and JSON error messages).
+    *   Backend sends `error_message` via WebSockets for critical simulation errors.
+    *   Frontend displays these errors to the user (e.g., using a toast notification).
+3.  **B6.3: Comprehensive Testing:**
+    *   Fill out unit, integration, and E2E tests as per the spec. Focus on scenarios like robot collisions, deadlocks, low battery leading to charging, and strategy differences.
+
+---
+
+## II. Iterative Prompts for LLM
+
+**Iteration 0: Foundation & Shared Types**
+
+*   **Step 0.1: Project Structure & Common Types**
+
+    ```text
+    # Prompt 0.1: Project Foundation and Shared Types
+
+    **Context:** We are building a client-server robot simulation. This step establishes the project structure and core data types that will be shared between the backend (Node.js/Express/TypeScript) and frontend (React/TypeScript).
+
+    **Task:**
+    1.  Initialize a monorepo structure using npm workspaces. Create three packages within a root `robot-simulation` directory:
+        *   `packages/common`: For shared TypeScript code.
+        *   `packages/backend`: For the Node.js/Express server.
+        *   `packages/frontend`: For the React client.
+        Configure the root `package.json` for workspaces.
+    2.  In `packages/common/src/types.ts`, define the following TypeScript interfaces based on the specification (Section 2):
+        *   `export interface Coordinates { x: number; y: number; }`
+        *   `export type CellType = 'walkable' | 'wall' | 'charging_station';`
+        *   `export interface Cell { type: CellType; coordinates: Coordinates; }`
+        *   `export type TaskStatus = 'unassigned' | 'assigned' | 'in_progress' | 'completed';`
+        *   `export interface Task { id: string; location: Coordinates; status: TaskStatus; workDuration: number; batteryCostToPerform: number; }`
+        *   `export type RobotStatus = 'idle' | 'en_route_to_task' | 'performing_task' | 'en_route_to_charger' | 'charging';`
+        *   `export interface Robot { id: string; iconType: string; currentLocation: Coordinates; battery: number; maxBattery: number; status: RobotStatus; assignedTaskId?: string; currentTarget?: Coordinates; currentPath?: Coordinates[]; movementCostPerCell: number; consecutiveWaitSteps: number; }`
+    3.  Set up basic `tsconfig.json` files in each package.
+        *   `packages/common/tsconfig.json`: Basic config for a library (e.g., `declaration: true`, `outDir: dist`).
+        *   `packages/backend/tsconfig.json`: Config for Node.js (`module: commonjs`, `esModuleInterop: true`, `outDir: dist`). Add path reference to `common`.
+        *   `packages/frontend/tsconfig.json`: Typical React config (e.g., `jsx: react-jsx`). Add path reference to `common`.
+    4.  Initialize `packages/backend` as a Node.js/TypeScript project.
+        *   `cd packages/backend`
+        *   `npm init -y`
+        *   `npm install express typescript @types/express ts-node-dev dotenv cors @types/cors uuid @types/uuid`
+        *   `npm install -D typescript @types/node`
+        *   Create `nodemon.json` for `ts-node-dev`.
+        *   Create a minimal `src/index.ts` that starts an Express server on a port from `.env` (default 3001).
+        *   Create `src/app.ts` to configure the Express app (json middleware, cors).
+    5.  Initialize `packages/frontend` as a React/TypeScript project using Vite.
+        *   `cd packages/frontend`
+        *   `npm create vite@latest . -- --template react-ts` (Install in current dir)
+        *   `npm install`
+
+    **Acceptance Criteria:**
+    *   The monorepo structure is created with `packages/common`, `packages/backend`, `packages/frontend`.
+    *   Shared types are defined in `packages/common/src/types.ts` and compile without errors.
+    *   Backend can import types from `common` (e.g., `import { Robot } from '@robot-simulation/common';` - adjust based on workspace naming).
+    *   Frontend can import types from `common`.
+    *   Basic backend Express server runs and is accessible.
+    *   Basic frontend React app (Vite default) runs.
+    *   Add simple `npm start` scripts in backend and frontend `package.json`.
+    ```
+
+**Iteration 1: Backend - Supabase & Grid API**
+
+*   **Step 1.1: Supabase Setup & Grid Schema**
+
+    ```text
+    # Prompt 1.1: Supabase Project and Grid Table Schema
+
+    **Context:** The backend will store grid definitions in Supabase. This task is manual but foundational.
+
+    **Task:**
+    1.  Go to [Supabase](https://supabase.com/) and create a new project.
+    2.  Navigate to the "SQL Editor" in your Supabase project.
+    3.  Create a new query and execute the following SQL to create the `grids` table:
+        ```sql
+        CREATE TABLE public.grids (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name TEXT NOT NULL UNIQUE,
+            layout JSONB NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+        );
+        -- Optional: Add some sample data
+        INSERT INTO public.grids (name, layout) VALUES
+        ('Simple 3x3', '[
+            [{"type":"walkable", "coordinates":{"x":0,"y":0}}, {"type":"wall", "coordinates":{"x":1,"y":0}}, {"type":"walkable", "coordinates":{"x":2,"y":0}}],
+            [{"type":"walkable", "coordinates":{"x":0,"y":1}}, {"type":"charging_station", "coordinates":{"x":1,"y":1}}, {"type":"walkable", "coordinates":{"x":2,"y":1}}],
+            [{"type":"walkable", "coordinates":{"x":0,"y":2}}, {"type":"walkable", "coordinates":{"x":1,"y":2}}, {"type":"walkable", "coordinates":{"x":2,"y":2}}]
+        ]'),
+        ('Empty 2x2', '[
+            [{"type":"walkable", "coordinates":{"x":0,"y":0}}, {"type":"walkable", "coordinates":{"x":1,"y":0}}],
+            [{"type":"walkable", "coordinates":{"x":0,"y":1}}, {"type":"walkable", "coordinates":{"x":1,"y":1}}]
+        ]');
+        ```
+    4.  Go to Project Settings -> API in Supabase. Note down the Project URL and the `anon` public key.
+    5.  In `packages/backend`, create a `.env` file (and add it to `.gitignore` in `packages/backend`):
+        ```env
+        SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
+        SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+        PORT=3001
+        ```
+
+    **Acceptance Criteria:**
+    *   Supabase project is created.
+    *   `grids` table exists in Supabase with the correct schema and sample data.
+    *   Backend `.env` file is configured with Supabase credentials and PORT.
+    ```
+
+*   **Step 1.2: Backend Supabase Service for Grids**
+
+    ```text
+    # Prompt 1.2: Backend SupabaseService for Grids
+
+    **Context:** The backend needs a service to interact with Supabase for fetching grid data. We'll use the `@supabase/supabase-js` client. Unit tests with Jest/Vitest are required.
+
+    **Task:**
+    1.  In `packages/backend`, install `@supabase/supabase-js`: `npm install @supabase/supabase-js`.
+    2.  Create `packages/backend/src/config/supabaseClient.ts`:
+        ```typescript
+        import { createClient, SupabaseClient } from '@supabase/supabase-js';
+        import dotenv from 'dotenv';
+
+        dotenv.config();
+
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error('Supabase URL or Anon Key is missing in .env file');
+        }
+
+        export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+        ```
+    3.  Define `GridDefinitionFromDB` interface in `packages/backend/src/services/supabaseService.ts` (or a shared types file if suitable, but this might be DB specific):
+        ```typescript
+        import { Cell } from '@robot-simulation/common'; // Adjust import path as needed
+
+        export interface GridDefinitionFromDB {
+            id: string;
+            name: string;
+            layout: Cell[][]; // Supabase stores JSONB as parsed object
+        }
+        ```
+    4.  Create `packages/backend/src/services/supabaseService.ts`:
+        ```typescript
+        import { supabase } from '../config/supabaseClient';
+        import { GridDefinitionFromDB } from './supabaseService'; // Or its actual location
+
+        export class SupabaseService {
+            public async getGrids(): Promise<GridDefinitionFromDB[]> {
+                const { data, error } = await supabase
+                    .from('grids')
+                    .select('id, name, layout');
+
+                if (error) {
+                    console.error('Error fetching grids:', error);
+                    throw error; // Or return an empty array/handle as appropriate
+                }
+                return data || [];
+            }
+
+            public async getGridById(id: string): Promise<GridDefinitionFromDB | null> {
+                const { data, error } = await supabase
+                    .from('grids')
+                    .select('id, name, layout')
+                    .eq('id', id)
+                    .single(); // .single() expects one row or null
+
+                if (error && error.code !== 'PGRST116') { // PGRST116: 0 rows
+                    console.error(`Error fetching grid by ID ${id}:`, error);
+                    throw error;
+                }
+                return data;
+            }
+        }
+        ```
+    5.  Setup Jest/Vitest in `packages/backend`. Install: `npm install -D jest @types/jest ts-jest` (or `vitest @vitest/coverage-v8`). Configure `jest.config.js` or `vitest.config.ts`.
+    6.  Create unit tests for `SupabaseService` in `packages/backend/src/services/supabaseService.test.ts`.
+        *   Mock `../config/supabaseClient` (or specifically the `supabase.from(...)...` chain).
+        *   Test `getGrids()`: successful fetch, empty fetch, error.
+        *   Test `getGridById()`: successful fetch, not found (PGRST116 error or null data), other error.
+
+    **Acceptance Criteria:**
+    *   `SupabaseService` is implemented.
+    *   `supabaseClient.ts` correctly initializes the client.
+    *   Unit tests for `SupabaseService` pass with comprehensive mocking of Supabase calls.
+    ```
+
+*   **Step 1.3: Backend Grid API Endpoints**
+
+    ```text
+    # Prompt 1.3: Backend Grid API Endpoints
+
+    **Context:** Expose API endpoints for fetching grid data using `SupabaseService`. Integration tests with `supertest` are required.
+
+    **Task:**
+    1.  Install `supertest` and `@types/supertest` in `packages/backend`: `npm install -D supertest @types/supertest`.
+    2.  Create `packages/backend/src/controllers/gridController.ts`:
+        ```typescript
+        import { Request, Response } from 'express';
+        import { SupabaseService } from '../services/supabaseService';
+
+        const supabaseService = new SupabaseService(); // Instantiate once or use DI
+
+        export const getAllGrids = async (req: Request, res: Response): Promise<void> => {
+            try {
+                const grids = await supabaseService.getGrids();
+                res.status(200).json(grids);
+            } catch (error) {
+                res.status(500).json({ message: 'Failed to fetch grids', error: (error as Error).message });
+            }
+        };
+
+        export const getGridDetails = async (req: Request, res: Response): Promise<void> => {
+            try {
+                const { id } = req.params;
+                const grid = await supabaseService.getGridById(id);
+                if (grid) {
+                    res.status(200).json(grid);
+                } else {
+                    res.status(404).json({ message: `Grid with ID ${id} not found` });
+                }
+            } catch (error) {
+                 res.status(500).json({ message: 'Failed to fetch grid details', error: (error as Error).message });
+            }
+        };
+        ```
+    3.  Create `packages/backend/src/routes/gridRoutes.ts`:
+        ```typescript
+        import { Router } from 'express';
+        import { getAllGrids, getGridDetails } from '../controllers/gridController';
+
+        const router = Router();
+
+        router.get('/grids', getAllGrids);
+        router.get('/grids/:id', getGridDetails);
+
+        export default router;
+        ```
+    4.  In `packages/backend/src/app.ts` (main Express setup):
+        *   Ensure `app.use(cors());` and `app.use(express.json());` are present.
+        *   Import and mount the router:
+            ```typescript
+            // ... other imports
+            import gridRoutes from './routes/gridRoutes';
+            // ...
+            app.use('/api', gridRoutes); // Mounts at /api/grids and /api/grids/:id
+            ```
+    5.  Create integration tests in `packages/backend/tests/integration/grids.test.ts`:
+        *   Use `supertest` to test `GET /api/grids` and `GET /api/grids/:id`.
+        *   Mock the `SupabaseService` methods (`getGrids`, `getGridById`) to control responses for tests and avoid actual DB calls during unit/integration tests.
+            *   Example: `jest.mock('../services/supabaseService');` and then `SupabaseService.prototype.getGrids.mockResolvedValue(...)`.
+
+    **Acceptance Criteria:**
+    *   Grid API endpoints (`/api/grids`, `/api/grids/:id`) are implemented and functional.
+    *   Integration tests pass, using mocks for `SupabaseService`.
+    *   CORS and JSON middleware are correctly configured.
+    ```
+
+**Iteration 2: Backend - In-Memory Simulation State (No Engine Yet)**
+
+*   **Step 2.1: Backend SimulationStateService (Initial Setup)**
+
+    ```text
+    # Prompt 2.1: Backend SimulationStateService (Initial Setup)
+
+    **Context:** The backend needs to manage the in-memory state of the simulation being configured (selected grid, placed items, strategy). This service acts as a temporary store for this data. Unit tests with Jest/Vitest are required.
+
+    **Task:**
+    1.  In `packages/backend`, create `src/config/constants.ts`:
+        ```typescript
+        export const DEFAULT_ROBOT_MAX_BATTERY = 100;
+        export const DEFAULT_MOVEMENT_COST_PER_CELL = 1;
+        export const DEFAULT_TASK_WORK_DURATION = 3; // simulation steps
+        export const DEFAULT_BATTERY_COST_TO_PERFORM = 2; // battery units
+        export const INITIAL_CONSECUTIVE_WAIT_STEPS = 0;
+        ```
+    2.  Create `packages/backend/src/services/simulationStateService.ts`.
+    3.  Import `Cell`, `Coordinates`, `Robot`, `Task`, `RobotStatus`, `TaskStatus` from `@robot-simulation/common`.
+    4.  Import constants from `src/config/constants.ts`.
+    5.  Import `v4 as uuidv4` from `uuid`.
+    6.  Implement a `SimulationStateService` class:
+        *   Private properties:
+            *   `currentGrid: Cell[][] | null = null;`
+            *   `currentGridName: string | null = null;`
+            *   `currentGridId: string | null = null;`
+            *   `robots: Robot[] = [];`
+            *   `tasks: Task[] = [];`
+            *   `selectedStrategy: 'nearest' | 'round-robin' | null = null;`
+            *   `simulationStatus: 'idle' | 'running' | 'paused' = 'idle';`
+            *   `simulationTime: number = 0;` // Current simulation step/tick
+        *   Public methods:
+            *   `initializeSimulation(gridId: string, gridName: string, gridLayout: Cell[][]): void`
+            *   `addRobot(location: Coordinates, iconType: string): Robot | null` (validate placement, generate UUID for ID, use constants for defaults)
+            *   `addTask(location: Coordinates): Task | null` (validate placement, generate UUID for ID, use constants for defaults)
+            *   `setStrategy(strategy: 'nearest' | 'round-robin'): void`
+            *   `getRobots(): Robot[]`
+            *   `getTasks(): Task[]`
+            *   `getCurrentGrid(): Cell[][] | null`
+            *   `getCurrentGridId(): string | null`
+            *   `getCurrentGridName(): string | null`
+            *   `getSelectedStrategy(): 'nearest' | 'round-robin' | null`
+            *   `getSimulationStatus(): 'idle' | 'running' | 'paused'`
+            *   `getSimulationTime(): number`
+            *   `resetSimulationSetup(): void` (Resets robots to initial state, tasks to unassigned, simStatus to 'idle', simTime to 0. Keeps grid, item placements, strategy).
+            *   `_isValidPlacement(location: Coordinates, allowOnCharger: boolean = false): boolean` (private helper using `this.currentGrid`).
+            *   `_getRobotById(robotId: string): Robot | undefined`
+            *   `_getTaskById(taskId: string): Task | undefined`
+            *   `updateRobotState(robotId: string, updates: Partial<Robot>): Robot | null` (find robot, update, return)
+            *   `updateTaskState(taskId: string, updates: Partial<Task>): Task | null`
+    7.  Create unit tests in `packages/backend/src/services/simulationStateService.test.ts`.
+        *   Test `initializeSimulation`.
+        *   Test `addRobot` (success, invalid: out of bounds, on wall, no grid), ID generation.
+        *   Test `addTask` (success, invalid: out of bounds, on wall, on charger, no grid), ID generation.
+        *   Test `setStrategy`.
+        *   Test `resetSimulationSetup`.
+        *   Test getters.
+        *   Test `updateRobotState` and `updateTaskState`.
+
+    **Acceptance Criteria:**
+    *   `SimulationStateService` manages simulation setup data in memory.
+    *   Unit tests pass, covering placement validation, ID generation, state updates, and reset logic.
+    ```
+
+*   **Step 2.2: Backend Simulation Setup API Endpoints**
+
+    ```text
+    # Prompt 2.2: Backend Simulation Setup API Endpoints
+
+    **Context:** Expose APIs for the frontend to configure the simulation using `SimulationStateService` and `SupabaseService`. Integration tests with `supertest` are required.
+
+    **Task:**
+    1.  In `packages/backend/src/controllers/simulationController.ts`:
+        *   Create a singleton instance: `const simulationStateService = new SimulationStateService();` (or use a proper DI later).
+        *   `setupSimulation(req, res)`:
+            *   Body: `{ gridId: string }`.
+            *   Fetch grid details using `SupabaseService`. If not found, 404.
+            *   Call `simulationStateService.initializeSimulation(grid.id, grid.name, grid.layout)`.
+            *   Return `200 OK` with `{ message: 'Simulation initialized with grid', gridName: grid.name }`.
+        *   `placeRobot(req, res)`:
+            *   Body: `{ location: Coordinates, iconType: string }`.
+            *   Call `simulationStateService.addRobot(...)`. If null, return `400 Bad Request` (e.g., invalid placement).
+            *   Return `201 Created` with the new robot.
+        *   `placeTask(req, res)`:
+            *   Body: `{ location: Coordinates }`.
+            *   Call `simulationStateService.addTask(...)`. If null, return `400 Bad Request`.
+            *   Return `201 Created` with the new task.
+        *   `selectStrategy(req, res)`:
+            *   Body: `{ strategy: 'nearest' | 'round-robin' }`.
+            *   Call `simulationStateService.setStrategy(...)`.
+            *   Return `200 OK`.
+        *   `resetSimulationSetupEndpoint(req, res)`: (To distinguish from engine control reset)
+            *   Call `simulationStateService.resetSimulationSetup()`.
+            *   Return `200 OK`.
+        *   `getSimulationSetupState(req, res)`: (Helper endpoint for frontend to sync if needed)
+            *   Return current grid, robots, tasks, strategy, status from `simulationStateService`.
+    2.  Create `packages/backend/src/routes/simulationSetupRoutes.ts`:
+        *   `POST /api/simulation/setup`: `simulationController.setupSimulation`
+        *   `POST /api/simulation/robots`: `simulationController.placeRobot`
+        *   `POST /api/simulation/tasks`: `simulationController.placeTask`
+        *   `POST /api/simulation/strategy`: `simulationController.selectStrategy`
+        *   `POST /api/simulation/reset-setup`: `simulationController.resetSimulationSetupEndpoint`
+        *   `GET /api/simulation/state`: `simulationController.getSimulationSetupState`
+    3.  Mount this router in `app.ts` (e.g., `app.use('/api/simulation', simulationSetupRoutes)`).
+    4.  Create integration tests in `packages/backend/tests/integration/simulationSetup.test.ts`:
+        *   Test each endpoint: success cases, validation failures (e.g., placing robot before grid setup, placing on wall).
+        *   Mock `SupabaseService` for the `/setup` endpoint.
+        *   You might need to make calls in sequence for some tests (e.g., setup grid, then place robot).
+
+    **Acceptance Criteria:**
+    *   Simulation setup API endpoints are functional.
+    *   Backend validates placements against the selected grid.
+    *   Integration tests pass.
+    ```
+
+**Iteration 3: Backend - Pathfinding**
+
+*   **Step 3.1: Pathfinding Service (A*)**
+
+    ```text
+    # Prompt 3.1: Backend PathfindingService (A*)
+
+    **Context:** Robots need to navigate the grid. Implement A* pathfinding. Unit tests required.
+
+    **Task:**
+    1.  Create `packages/backend/src/services/pathfindingService.ts`.
+    2.  Import `Cell`, `Coordinates` from `@robot-simulation/common`.
+    3.  Implement a `PathfindingService` class or a standalone A* function:
+        *   `findPath(grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] | null`
+        *   Path should be an array of `Coordinates` representing cell centers to move to, from `start` (exclusive) to `end` (inclusive). If `start` equals `end`, return an empty array. If no path, return `null`.
+        *   Heuristic: Manhattan distance (`Math.abs(node.x - end.x) + Math.abs(node.y - end.y)`).
+        *   Nodes in open/closed lists should store `x, y, g, h, f`, and `parent` (for path reconstruction).
+        *   A priority queue (min-heap) for the open list is optimal but a sorted array can work for small grids.
+    4.  Create unit tests in `packages/backend/src/services/pathfindingService.test.ts`. Test extensively:
+        *   Simple direct path.
+        *   Path around one obstacle.
+        *   Path around multiple obstacles.
+        *   No path possible (target surrounded).
+        *   Start = End.
+        *   Start or End out of bounds (should return `null` or throw, clarify behavior).
+        *   Start or End on a 'wall' cell (should return `null`).
+        *   Grids of different sizes.
+        *   Path to a 'charging_station' cell.
+
+    **Acceptance Criteria:**
+    *   A* algorithm correctly implemented.
+    *   Unit tests cover diverse scenarios and edge cases.
+    ```
+
+This completes the first ~3 phases of the backend setup. The next steps would involve:
+*   **Frontend UI for Setup:** Implementing React components to call these backend APIs and display the setup state.
+*   **Backend Simulation Engine:** Implementing the core `step()` logic, robot/task actions, task assignment.
+*   **WebSocket Integration:** For real-time updates.
+*   **Frontend Polish & Full Integration.**
+*   **Finalizing & Metrics Storage.**
+
+Each prompt builds upon the previous ones, ensuring that new code is integrated with existing parts and tested.
