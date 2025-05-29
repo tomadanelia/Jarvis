@@ -1,0 +1,23 @@
+// packages/common/tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020", // Or a suitable modern target
+    "module": "CommonJS", // Or ESNext if you configure backend/frontend to handle it
+    "declaration": true, // Crucial: Generates .d.ts files
+    "declarationMap": true, // Optional: Generates source maps for .d.ts files
+    "sourceMap": true, // Optional: Generates source maps for .js files
+    "outDir": "./dist", // Output directory for compiled JS and .d.ts files
+    "rootDir": "./src", // Specifies the root directory of input files
+    "composite": true, // Enables building this project as part of a larger project
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    // "baseUrl": "./src", // Optional, if you want absolute imports within common
+    // "paths": { // Optional, if you want absolute imports within common
+    //   "@common/*": ["*"]
+    // }
+  },
+  "include": ["src/**/*"], // Which files to include in compilation
+  "exclude": ["node_modules", "dist"] // Which files to exclude
+}

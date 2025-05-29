@@ -1,0 +1,41 @@
+// packages/backend/tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020", // Or your desired Node.js compatible target
+    "module": "CommonJS", // Standard for Node.js/Express
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true, // If you import JSON files (e.g., config)
+    "sourceMap": true, // Good for debugging
+    // Option 1: Using TypeScript Project References (Preferred)
+    // "composite": true, // Only if this project is also referenced by another project
+                         // Not strictly needed if it's a top-level app, but good for consistency
+                         // if you plan to build the monorepo with `tsc -b`
+ 
+    // Option 2: Using "paths" for module resolution (Alternative if not using project references directly for build)
+    // This assumes your build tool or execution environment handles module resolution correctly.
+    // For npm/yarn/pnpm workspaces, they often create symlinks in node_modules,
+    // so direct imports like '@your-workspace-org/common' might just work if "common"
+    // has a "main" or "types" field in its package.json pointing to dist.
+    // However, "paths" can make it explicit for the TS language server.
+    "baseUrl": ".", // Important for "paths" to work correctly relative to this tsconfig.json
+    "paths": {
+      "@common/*": ["../common/src/*"], // Maps @common/... to the src directory of the common package
+                                      // During development, TS server uses this.
+                                      // For runtime, ensure common is built and linked by workspace.
+      // OR, if common builds to a 'dist' and has a 'types' field in its package.json:
+      // "@your-workspace-org/common/*": ["../common/dist/*"] // This is less common for direct TS path mapping
+      // The symlink created by npm/yarn workspaces in node_modules is usually how this works.
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"], // Exclude tests if they have their own tsconfig or are run differently
+  // Option 1: Using TypeScript Project References (Preferred for build orchestration)
+  "references": [
+    { "path": "../common" } // Points to the 'common' package directory
+  ]
+}

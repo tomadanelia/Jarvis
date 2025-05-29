@@ -1,27 +1,38 @@
+// packages/frontend/tsconfig.app.json (specific to your app's src code)
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-
+ 
     /* Bundler mode */
-    "moduleResolution": "bundler",
+    "moduleResolution": "bundler", // Vite prefers "bundler" or "NodeNext"
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true, // Vite requirement
+    "noEmit": true, // Vite handles emit
     "jsx": "react-jsx",
-
+ 
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+ 
+    /* Path Aliases - Option 1: Using TS paths */
+    "baseUrl": ".", // Relative to this tsconfig.app.json (usually src)
+    "paths": {
+      "@/*": ["./src/*"], // Alias for src folder within frontend
+      "@common/*": ["../../common/src/*"] // Alias to common's src
+                                          // Adjust path based on actual structure
+    }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Option 2: Rely on Project References (defined in packages/frontend/tsconfig.json)
+  // and workspace symlinks. Vite often works well with this directly.
+  // If you have the project reference in the main tsconfig.json,
+  // Vite's resolver (which uses esbuild/Rollup) should pick up the types from common's dist
+  // if common is built and its package.json has "types" field.
 }
