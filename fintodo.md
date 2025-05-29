@@ -8,7 +8,7 @@
     *   [ ] Create `packages/common`, `packages/backend`, `packages/frontend` directories.
     *   [ ] Configure root `package.json` for workspaces.
     *   [ ] `cd packages/backend`, `npm init -y`.
-    *   [ ] Install backend dependencies: `express`, `typescript`, `@types/express`, `ts-node-dev`, `dotenv`, `cors`, `@types/cors`, `uuid`, `@types/uuid`.
+    *   [ ] Install backend dependencies: `express`, `typescript`, `@types/express`, 8`ts-node-dev`, `dotenv`, `cors`, `@types/cors`, `uuid`, `@types/uuid`.
     *   [ ] Install backend devDependencies: `typescript @types/node`.
     *   [ ] Create `packages/backend/tsconfig.json`.
     *   [ ] Create `packages/backend/nodemon.json` (or similar for `ts-node-dev`).
@@ -25,7 +25,7 @@
     *   [ ] Create `packages/common/tsconfig.json` (for library output).
     *   [ ] Create `packages/common/src/types.ts`.
     *   [ ] Define `Coordinates`, `CellType`, `Cell`, `TaskStatus`, `Task`, `RobotStatus`, `Robot` interfaces in `types.ts`.
-    *   [ ] Ensure `packages/backend/tsconfig.json` and `packages/frontend/tsconfig.json` can reference `packages/common` (e.g., using `paths` or `references`).
+8    *   [ ] Ensure `packages/backend/tsconfig.json` and `packages/frontend/tsconfig.json` can reference `packages/common` (e.g., using `paths` or `references`).
     *   [ ] Test importing a type from `common` into a dummy file in `backend` and `frontend`.
 *   **[ ] (Est: 15-30 min) P0.4: Supabase Project Setup (Manual)**
     *   [ ] Create a new Supabase project.
@@ -38,7 +38,7 @@
 *   **[ ] (Est: 30-60 min) Step 1.1: Supabase Grid Table Schema (Manual SQL + Prompt)**
     *   [ ] In Supabase SQL Editor, create the `grids` table schema.
     *   [ ] Insert sample grid data.
-*   **[ ] (Est: 1-2 hours) Step 1.2: Backend Supabase Service for Grids (Code + Unit Tests)**
+*   **[ ] (Est: 30-60 mins) Step 1.2: Backend Supabase Service for Grids (Code + Unit Tests)**
     *   [ ] Install `@supabase/supabase-js` in `packages/backend`.
     *   [ ] Create `packages/backend/src/config/supabaseClient.ts`.
     *   [ ] Define `GridDefinitionFromDB` interface.
@@ -46,7 +46,7 @@
     *   [ ] Implement `SupabaseService` class with `getGrids()` and `getGridById()`.
     *   [ ] Setup Jest/Vitest in `packages/backend`.
     *   [ ] Write unit tests for `SupabaseService` (mocking `supabaseClient`).
-*   **[ ] (Est: 1-2 hours) Step 1.3: Backend Grid API Endpoints (Code + Integration Tests)**
+*   **[ ] (Est: 1 hour) Step 1.3: Backend Grid API Endpoints (Code + Integration Tests)**
     *   [ ] Install `supertest @types/supertest` in `packages/backend`.
     *   [ ] Create `packages/backend/src/controllers/gridController.ts` (`getAllGrids`, `getGridDetails`).
     *   [ ] Create `packages/backend/src/routes/gridRoutes.ts`.
@@ -56,7 +56,7 @@
 ## Phase 2: Backend - In-Memory Simulation State (Setup Logic) (Est: 3-5 hours)
 
 ### Iteration 2: Simulation State & Setup APIs
-*   **[ ] (Est: 1.5-2.5 hours) Step 2.1: Backend SimulationStateService (Initial Setup) (Code + Unit Tests)**
+8*   **[ ] (Est: 1.5-2.5 hours) Step 2.1: Backend SimulationStateService (Initial Setup) (Code + Unit Tests)**
     *   [ ] Create `packages/backend/src/config/constants.ts` (default robot/task values).
     *   [ ] Create `packages/backend/src/services/simulationStateService.ts`.
     *   [ ] Implement `SimulationStateService` class:
