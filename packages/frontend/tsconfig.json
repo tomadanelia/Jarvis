@@ -1,7 +1,9 @@
+// packages/frontend/tsconfig.json (root for frontend, references app/node configs)
 {
-  "files": [],
+  "files": [], // Vite often prefers this to be empty at this level
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    { "path": "./tsconfig.node.json" },
+    { "path": "../common" } // Add reference to the common package
   ]
 }
