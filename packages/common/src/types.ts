@@ -2,7 +2,7 @@ export interface Coordinates{
 x:number;
 y:number;
 }
-export type CellType = `walkable`|`wall`|`chargingStation`;
+export type CellType = `walkable`|`wall`|`chargingStation`|`empty`;
 export interface Cell{
     type:CellType;
     coordinates:Coordinates;
