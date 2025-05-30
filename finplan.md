@@ -204,7 +204,7 @@ This blueprint focuses on building the backend first, establishing core logic an
 **Iteration 0: Foundation & Shared Types**
 
 *   **Step 0.1: Project Structure & Common Types**
-
+    *(This prompt likely remains the same - ensure `ts-node` is added as a dev dep to backend if it wasn't before)*
     ```text
     # Prompt 0.1: Project Foundation and Shared Types
 
@@ -232,7 +232,7 @@ This blueprint focuses on building the backend first, establishing core logic an
         *   `cd packages/backend`
         *   `npm init -y`
         *   `npm install express typescript @types/express ts-node-dev dotenv cors @types/cors uuid @types/uuid`
-        *   `npm install -D typescript @types/node`
+        *   `npm install -D typescript @types/node ts-node` // Ensure ts-node is here
         *   Create `nodemon.json` for `ts-node-dev`.
         *   Create a minimal `src/index.ts` that starts an Express server on a port from `.env` (default 3001).
         *   Create `src/app.ts` to configure the Express app (json middleware, cors).
@@ -244,21 +244,19 @@ This blueprint focuses on building the backend first, establishing core logic an
     **Acceptance Criteria:**
     *   The monorepo structure is created with `packages/common`, `packages/backend`, `packages/frontend`.
     *   Shared types are defined in `packages/common/src/types.ts` and compile without errors.
-    *   Backend can import types from `common` (e.g., `import { Robot } from '@robot-simulation/common';` - adjust based on workspace naming).
+    *   Backend can import types from `common`.
     *   Frontend can import types from `common`.
     *   Basic backend Express server runs and is accessible.
     *   Basic frontend React app (Vite default) runs.
-    *   Add simple `npm start` scripts in backend and frontend `package.json`.
+    *   Add simple `npm start` (or `dev`) scripts in backend and frontend `package.json`.
     ```
 
-**Iteration 1: Backend - Supabase & Grid API**
-
-*   **Step 1.1: Supabase Setup & Grid Schema**
-
+*   **(MODIFIED) Step P0.4 (was 1.1 in old plan): Supabase Project and Grid Table Schema**
+    *(This prompt now only covers Supabase project creation, .env setup with SERVICE_ROLE_KEY, and the SQL to create the `grids` table. Sample data insertion is moved to the seeder script prompt).*
     ```text
-    # Prompt 1.1: Supabase Project and Grid Table Schema
+    # Prompt P0.4: Supabase Project and Grid Table Schema
 
-    **Context:** The backend will store grid definitions in Supabase. This task is manual but foundational.
+    **Context:** The backend will store grid definitions in Supabase. The `grids` table will store the full `Cell[][]` layout as JSONB, which will be populated by a seeding script.
 
     **Task:**
     1.  Go to [Supabase](https://supabase.com/) and create a new project.
@@ -268,94 +266,168 @@ This blueprint focuses on building the backend first, establishing core logic an
         CREATE TABLE public.grids (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name TEXT NOT NULL UNIQUE,
-            layout JSONB NOT NULL,
+            layout JSONB NOT NULL, -- This will store the full Cell[][] structure
             created_at TIMESTAMPTZ DEFAULT now() NOT NULL
         );
-        -- Optional: Add some sample data
-        INSERT INTO public.grids (name, layout) VALUES
-        ('Simple 3x3', '[
-            [{"type":"walkable", "coordinates":{"x":0,"y":0}}, {"type":"wall", "coordinates":{"x":1,"y":0}}, {"type":"walkable", "coordinates":{"x":2,"y":0}}],
-            [{"type":"walkable", "coordinates":{"x":0,"y":1}}, {"type":"charging_station", "coordinates":{"x":1,"y":1}}, {"type":"walkable", "coordinates":{"x":2,"y":1}}],
-            [{"type":"walkable", "coordinates":{"x":0,"y":2}}, {"type":"walkable", "coordinates":{"x":1,"y":2}}, {"type":"walkable", "coordinates":{"x":2,"y":2}}]
-        ]'),
-        ('Empty 2x2', '[
-            [{"type":"walkable", "coordinates":{"x":0,"y":0}}, {"type":"walkable", "coordinates":{"x":1,"y":0}}],
-            [{"type":"walkable", "coordinates":{"x":0,"y":1}}, {"type":"walkable", "coordinates":{"x":1,"y":1}}]
-        ]');
         ```
-    4.  Go to Project Settings -> API in Supabase. Note down the Project URL and the `anon` public key.
-    5.  In `packages/backend`, create a `.env` file (and add it to `.gitignore` in `packages/backend`):
+    4.  Go to Project Settings -> API in Supabase. Note down:
+        *   Project URL
+        *   `anon` public key
+        *   `service_role` secret key
+    5.  In `packages/backend`, create/update the `.env` file (and add it to `.gitignore` in `packages/backend`):
         ```env
         SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
         SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+        SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY # For seeding script
         PORT=3001
         ```
 
     **Acceptance Criteria:**
     *   Supabase project is created.
-    *   `grids` table exists in Supabase with the correct schema and sample data.
-    *   Backend `.env` file is configured with Supabase credentials and PORT.
+    *   `grids` table exists in Supabase with the correct schema (id, name, layout JSONB, created_at).
+    *   Backend `.env` file is configured with Supabase credentials (URL, ANON_KEY, SERVICE_ROLE_KEY) and PORT.
     ```
 
-*   **Step 1.2: Backend Supabase Service for Grids**
+**Iteration 1 (NEW): Backend - Grid Seeding from Compact Files**
 
+*   **(NEW) Step 1.1: Create Compact Grid Definition Files**
     ```text
-    # Prompt 1.2: Backend SupabaseService for Grids
+    # Prompt 1.1: Create Compact Grid Definition Files
 
-    **Context:** The backend needs a service to interact with Supabase for fetching grid data. We'll use the `@supabase/supabase-js` client. Unit tests with Jest/Vitest are required.
+    **Context:** We will define our grid layouts in a compact, human-readable text format and store these as separate files. A seeding script will later parse these and populate the database.
 
     **Task:**
-    1.  In `packages/backend`, install `@supabase/supabase-js`: `npm install @supabase/supabase-js`.
-    2.  Create `packages/backend/src/config/supabaseClient.ts`:
+    1.  Create a new directory: `packages/backend/scripts/grid_definitions/text_files/`.
+    2.  Inside this directory, create 2-3 sample text files, each representing a grid. Use a character matrix format:
+        *   `.` for 'walkable'
+        *   `#` for 'wall'
+        *   `C` for 'charging_station'
+    3.  Example file `simple_maze.txt`:
+        ```
+        ...#...
+        .C.#.C.
+        ...#...
+        .#####.
+        .......
+        ```
+    4.  Example file `open_field.txt`:
+        ```
+        .....
+        .....
+        ..C..
+        .....
+        .....
+        ```
+
+    **Acceptance Criteria:**
+    *   The directory `packages/backend/scripts/grid_definitions/text_files/` is created.
+    *   At least two `.txt` files with compact grid definitions exist within this directory.
+    ```
+
+*   **(NEW) Step 1.2: Implement Grid Seeding Script**
+    ```text
+    # Prompt 1.2: Implement Grid Seeding Script
+
+    **Context:** Create a Node.js script that reads compact grid definitions from text files, parses them into the full `Cell[][]` JSON structure, and inserts/upserts them into the Supabase `grids` table.
+
+    **Task:**
+    1.  Create `packages/backend/scripts/seedGrids.ts`.
+    2.  Import necessary modules:
+        *   `createClient` from `@supabase/supabase-js`.
+        *   `Cell`, `CellType`, `Coordinates` from `@robot-sim/common`.
+        *   `dotenv` and `path`.
+        *   `promises as fs` from `fs`.
+    3.  Initialize the Supabase client within the script using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the `.env` file. Ensure `dotenv.config()` is called correctly (e.g., `dotenv.config({ path: path.resolve(__dirname, '../.env') });`).
+    4.  Implement a `parseCharacterMatrix(matrixString: string, gridNameForLogging: string): Cell[][]` function:
+        *   Input: A multi-line string representing the compact grid.
+        *   Output: The `Cell[][]` array.
+        *   Logic: Trim input, split into lines, iterate characters, map to `Cell` objects with correct `type` and `coordinates`. Handle unknown characters gracefully (e.g., log warning, default to 'wall').
+    5.  Implement an async `seedDatabase()` function:
+        *   Define the path to the `grid_definitions/text_files/` directory.
+        *   Use `fs.readdir` to get a list of files in that directory.
+        *   Filter for `.txt` files.
+        *   Loop through each `.txt` file:
+            *   Derive a `gridName` from the filename (e.g., "simple_maze.txt" -> "Simple Maze").
+            *   Use `fs.readFile` to read the compact layout string.
+            *   Call `parseCharacterMatrix` to convert it to the full `Cell[][]` layout.
+            *   Use `supabase.from('grids').upsert({ name: gridName, layout: fullLayout }, { onConflict: 'name' }).select()` to insert or update the grid in the database.
+            *   Log success or error for each grid.
+    6.  Call `seedDatabase()` at the end of the script and include error handling.
+    7.  In `packages/backend/package.json`, add a script: `"seed": "ts-node ./scripts/seedGrids.ts"`.
+
+    **Acceptance Criteria:**
+    *   `seedGrids.ts` script is implemented correctly.
+    *   The script successfully reads `.txt` files, parses them, and populates the `grids` table in Supabase with the full `Cell[][]` JSON in the `layout` column.
+    *   Running `npm run seed -w packages/backend` executes the script without errors (assuming Supabase credentials are correct and the table exists).
+    *   Data in Supabase `grids` table is verified.
+    ```
+
+**Iteration 2 (was Iteration 1 in old plan): Backend Service and API for Grids**
+
+*   **(MODIFIED) Step 2.1 (was 1.2): Backend Supabase Service for Grids**
+    *(This prompt now assumes the `layout` in Supabase is already full JSONB. The service uses the ANON_KEY for public API reads).*
+    ```text
+    # Prompt 2.1: Backend SupabaseService for Grids (Fetching Processed Data)
+
+    **Context:** The backend needs a service to fetch fully processed grid data (where `layout` is already `Cell[][]`) from Supabase for its public API. This service will use the Supabase ANON_KEY. Unit tests are required.
+
+    **Task:**
+    1.  Ensure `@supabase/supabase-js` is installed in `packages/backend`.
+    2.  Create `packages/backend/src/config/supabaseClient.ts` (if it doesn't exist or needs adjustment for ANON_KEY usage by the main API):
         ```typescript
+        // packages/backend/src/config/supabaseClient.ts
         import { createClient, SupabaseClient } from '@supabase/supabase-js';
         import dotenv from 'dotenv';
 
-        dotenv.config();
+        // Ensure .env is loaded from the correct path relative to where this might be called from
+        // For services/controllers, it's usually fine if index.ts loads it first.
+        // For direct script runs, explicit path might be needed if not already loaded.
+        dotenv.config({ path: require('path').resolve(__dirname, '../../.env') });
+
 
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; // Use ANON key for public API
 
         if (!supabaseUrl || !supabaseAnonKey) {
-            throw new Error('Supabase URL or Anon Key is missing in .env file');
+            throw new Error('Supabase URL or Anon Key is missing in .env file for API client');
         }
 
-        export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+        export const supabaseApiPublicClient: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
         ```
-    3.  Define `GridDefinitionFromDB` interface in `packages/backend/src/services/supabaseService.ts` (or a shared types file if suitable, but this might be DB specific):
+    3.  Define a `GridDefinition` interface (e.g., in `services/supabaseService.ts` or import from `common` if identical) that expects `id`, `name`, and `layout: Cell[][]`.
         ```typescript
-        import { Cell } from '@robot-simulation/common'; // Adjust import path as needed
-
-        export interface GridDefinitionFromDB {
+        // Example if defined in supabaseService.ts
+        import { Cell } from '@robot-sim/common';
+        export interface GridDefinition {
             id: string;
             name: string;
-            layout: Cell[][]; // Supabase stores JSONB as parsed object
+            layout: Cell[][];
         }
         ```
     4.  Create `packages/backend/src/services/supabaseService.ts`:
         ```typescript
-        import { supabase } from '../config/supabaseClient';
-        import { GridDefinitionFromDB } from './supabaseService'; // Or its actual location
+        import { supabaseApiPublicClient } from '../config/supabaseClient'; // Use the public client
+        import { GridDefinition } from './supabaseService'; // Or its actual location
 
         export class SupabaseService {
-            public async getGrids(): Promise<GridDefinitionFromDB[]> {
-                const { data, error } = await supabase
+            public async getGrids(): Promise<GridDefinition[]> {
+                const { data, error } = await supabaseApiPublicClient
                     .from('grids')
-                    .select('id, name, layout');
+                    .select('id, name, layout'); // layout is already Cell[][]
 
                 if (error) {
                     console.error('Error fetching grids:', error);
-                    throw error; // Or return an empty array/handle as appropriate
+                    throw error;
                 }
                 return data || [];
             }
 
-            public async getGridById(id: string): Promise<GridDefinitionFromDB | null> {
-                const { data, error } = await supabase
+            public async getGridById(id: string): Promise<GridDefinition | null> {
+                const { data, error } = await supabaseApiPublicClient
                     .from('grids')
-                    .select('id, name, layout')
+                    .select('id, name, layout') // layout is already Cell[][]
                     .eq('id', id)
-                    .single(); // .single() expects one row or null
+                    .single();
 
                 if (error && error.code !== 'PGRST116') { // PGRST116: 0 rows
                     console.error(`Error fetching grid by ID ${id}:`, error);
@@ -365,87 +437,41 @@ This blueprint focuses on building the backend first, establishing core logic an
             }
         }
         ```
-    5.  Setup Jest/Vitest in `packages/backend`. Install: `npm install -D jest @types/jest ts-jest` (or `vitest @vitest/coverage-v8`). Configure `jest.config.js` or `vitest.config.ts`.
+    5.  Setup Jest/Vitest in `packages/backend` (if not already done).
     6.  Create unit tests for `SupabaseService` in `packages/backend/src/services/supabaseService.test.ts`.
-        *   Mock `../config/supabaseClient` (or specifically the `supabase.from(...)...` chain).
-        *   Test `getGrids()`: successful fetch, empty fetch, error.
-        *   Test `getGridById()`: successful fetch, not found (PGRST116 error or null data), other error.
+        *   Mock `../config/supabaseClient` (specifically `supabaseApiPublicClient`).
+        *   Test `getGrids()`: successful fetch (returning data with `Cell[][]` layout), empty fetch, error.
+        *   Test `getGridById()`: successful fetch, not found, other error.
 
     **Acceptance Criteria:**
-    *   `SupabaseService` is implemented.
-    *   `supabaseClient.ts` correctly initializes the client.
-    *   Unit tests for `SupabaseService` pass with comprehensive mocking of Supabase calls.
+    *   `SupabaseService` is implemented to fetch pre-processed grids.
+    *   `supabaseClient.ts` correctly initializes the client for public API use (ANON_KEY).
+    *   Unit tests for `SupabaseService` pass with comprehensive mocking.
     ```
 
-*   **Step 1.3: Backend Grid API Endpoints**
-
+*   **(MODIFIED) Step 2.2 (was 1.3): Backend Grid API Endpoints**
+    *(This prompt's implementation details for the controller/routes remain the same, but it now relies on the updated `SupabaseService` from Step 2.1 above which fetches pre-processed data).*
     ```text
-    # Prompt 1.3: Backend Grid API Endpoints
+    # Prompt 2.2: Backend Grid API Endpoints (Using Updated SupabaseService)
 
-    **Context:** Expose API endpoints for fetching grid data using `SupabaseService`. Integration tests with `supertest` are required.
+    **Context:** Expose API endpoints for fetching grid data. These endpoints will use the `SupabaseService` which now fetches grids with fully processed `Cell[][]` layouts. Integration tests with `supertest` are required.
 
     **Task:**
-    1.  Install `supertest` and `@types/supertest` in `packages/backend`: `npm install -D supertest @types/supertest`.
-    2.  Create `packages/backend/src/controllers/gridController.ts`:
-        ```typescript
-        import { Request, Response } from 'express';
-        import { SupabaseService } from '../services/supabaseService';
-
-        const supabaseService = new SupabaseService(); // Instantiate once or use DI
-
-        export const getAllGrids = async (req: Request, res: Response): Promise<void> => {
-            try {
-                const grids = await supabaseService.getGrids();
-                res.status(200).json(grids);
-            } catch (error) {
-                res.status(500).json({ message: 'Failed to fetch grids', error: (error as Error).message });
-            }
-        };
-
-        export const getGridDetails = async (req: Request, res: Response): Promise<void> => {
-            try {
-                const { id } = req.params;
-                const grid = await supabaseService.getGridById(id);
-                if (grid) {
-                    res.status(200).json(grid);
-                } else {
-                    res.status(404).json({ message: `Grid with ID ${id} not found` });
-                }
-            } catch (error) {
-                 res.status(500).json({ message: 'Failed to fetch grid details', error: (error as Error).message });
-            }
-        };
-        ```
-    3.  Create `packages/backend/src/routes/gridRoutes.ts`:
-        ```typescript
-        import { Router } from 'express';
-        import { getAllGrids, getGridDetails } from '../controllers/gridController';
-
-        const router = Router();
-
-        router.get('/grids', getAllGrids);
-        router.get('/grids/:id', getGridDetails);
-
-        export default router;
-        ```
-    4.  In `packages/backend/src/app.ts` (main Express setup):
-        *   Ensure `app.use(cors());` and `app.use(express.json());` are present.
-        *   Import and mount the router:
-            ```typescript
-            // ... other imports
-            import gridRoutes from './routes/gridRoutes';
-            // ...
-            app.use('/api', gridRoutes); // Mounts at /api/grids and /api/grids/:id
-            ```
-    5.  Create integration tests in `packages/backend/tests/integration/grids.test.ts`:
+    1.  Ensure `supertest` and `@types/supertest` are installed in `packages/backend`.
+    2.  Create/Update `packages/backend/src/controllers/gridController.ts`:
+        *   Instantiate the (updated) `SupabaseService`.
+        *   `getAllGrids(req, res)`: Calls `supabaseService.getGrids()` and sends the result.
+        *   `getGridDetails(req, res)`: Calls `supabaseService.getGridById()` and sends the result or 404/error.
+        *(Controller logic itself doesn't change much, but the data it receives from the service is now pre-processed).*
+    3.  Create/Update `packages/backend/src/routes/gridRoutes.ts` to map to these controller actions.
+    4.  Ensure the grid router is mounted in `packages/backend/src/app.ts` (e.g., `app.use('/api', gridRoutes)`).
+    5.  Create/Update integration tests in `packages/backend/tests/integration/grids.test.ts`:
         *   Use `supertest` to test `GET /api/grids` and `GET /api/grids/:id`.
-        *   Mock the `SupabaseService` methods (`getGrids`, `getGridById`) to control responses for tests and avoid actual DB calls during unit/integration tests.
-            *   Example: `jest.mock('../services/supabaseService');` and then `SupabaseService.prototype.getGrids.mockResolvedValue(...)`.
+        *   Mock the `SupabaseService` methods (`getGrids`, `getGridById`) to return data that includes the full `Cell[][]` layout structure.
 
     **Acceptance Criteria:**
-    *   Grid API endpoints (`/api/grids`, `/api/grids/:id`) are implemented and functional.
-    *   Integration tests pass, using mocks for `SupabaseService`.
-    *   CORS and JSON middleware are correctly configured.
+    *   Grid API endpoints (`/api/grids`, `/api/grids/:id`) are functional and correctly serve grid data with the full `layout`.
+    *   Integration tests pass, using mocks for the updated `SupabaseService`.
     ```
 
 **Iteration 2: Backend - In-Memory Simulation State (No Engine Yet)**

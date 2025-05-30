@@ -30,30 +30,64 @@
 *   **[ ] (Est: 15-30 min) P0.4: Supabase Project Setup (Manual)**
     *   [ ] Create a new Supabase project.
     *   [ ] Note Supabase Project URL and Anon Key.
-    *   [ ] Update `packages/backend/.env` with `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+    *   [ ] Update `packages/backend/.env` with `SUPABASE_URL` and `SUPABASE_ANON_KEY` and SERVICE_ROLE_KEY.
+## Phase 1: Backend - Supabase Integration, Grid Seeding & API (Est: 3.5-6 hours)
 
-## Phase 1: Backend - Supabase Integration & Grid API (Est: 3-5 hours)
+### Iteration 1: Supabase Table & Grid Seeding Script (Focus on getting data IN)
 
-### Iteration 1: Supabase & Grid API
-*   **[ ] (Est: 30-60 min) Step 1.1: Supabase Grid Table Schema (Manual SQL + Prompt)**
-    *   [ ] In Supabase SQL Editor, create the `grids` table schema.
-    *   [ ] Insert sample grid data.
-*   **[ ] (Est: 1-2 hours) Step 1.2: Backend Supabase Service for Grids (Code + Unit Tests)**
-    *   [ ] Install `@supabase/supabase-js` in `packages/backend`.
-    *   [ ] Create `packages/backend/src/config/supabaseClient.ts`.
-    *   [ ] Define `GridDefinitionFromDB` interface.
+*   **[ ] (Est: 30-45 min) Step 1.1: Supabase `grids` Table Schema (Manual SQL)**
+    *   [ ] In Supabase SQL Editor, create the `grids` table schema:
+        ```sql
+        CREATE TABLE public.grids (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name TEXT NOT NULL UNIQUE,
+            layout JSONB NOT NULL, -- Will store the full Cell[][] structure
+            created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+        );
+        ```
+*   **[ ] (Est: 15-30 min) Step 1.2: Create Compact Grid Definition Files (Text Files)**
+    *   [ ] Create directory `packages/backend/scripts/grid_definitions/text_files/`.
+    *   [ ] Create 2-3 sample grid definition files (e.g., `simple_maze.txt`, `open_field.txt`) in this directory using your character matrix format (e.g., `.`, `#`, `C`).
+*   **[ ] (Est: 1.5-2.5 hours) Step 1.3: Implement Grid Seeding Script (Node.js)**
+    *   [ ] Ensure `ts-node` is a dev dependency in `packages/backend` (already added in P0.1).
+    *   [ ] Create `packages/backend/scripts/seedGrids.ts`.
+    *   [ ] Import necessary modules (`@supabase/supabase-js`, `fs/promises`, `path`, `dotenv`, shared types from `@robot-sim/common`).
+    *   [ ] Implement Supabase client initialization (using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env`).
+    *   [ ] Implement the `parseCharacterMatrix(matrixString: string, gridName: string): Cell[][]` function to convert compact text format to the full `Cell[][]` JSON structure.
+    *   [ ] Implement the main `seedDatabase()` async function:
+        *   [ ] Read all `.txt` files from the `grid_definitions/text_files/` directory.
+        *   [ ] For each file:
+            *   [ ] Derive a grid `name` (e.g., from filename).
+            *   [ ] Read the compact layout string from the file.
+            *   [ ] Call `parseCharacterMatrix` to get the full `Cell[][]` layout.
+            *   [ ] Use Supabase client's `.upsert()` method to insert/update the grid in the `grids` table (with `name` and the full `layout` JSONB). Use `onConflict: 'name'` for `upsert`.
+    *   [ ] Add logging for success/failure of each grid insertion.
+    *   [ ] Add a script to `packages/backend/package.json`: `"seed": "ts-node ./scripts/seedGrids.ts"`.
+    *   [ ] **Test:** Run the seed script (`npm run seed -w packages/backend`). Verify in Supabase Studio that the `grids` table is populated with the `name` and the correctly processed `layout` (as JSONB).
+
+### Iteration 2: Backend Service and API for Grids (Focus on getting data OUT)
+
+*   **[ ] (Est: 1-2 hours) Step 1.4: Backend Supabase Service for Grids (Code + Unit Tests)**
+    *   [ ] Install `@supabase/supabase-js` in `packages/backend` (if not already done, though seeding script would need it).
+    *   [ ] Create `packages/backend/src/config/supabaseClient.ts` (this one will configure the client for the main API using the **ANON_KEY** for read-only access, distinct from the seeder's service role client).
+    *   [ ] Define `GridDefinitionFromDB` interface in `services/supabaseService.ts` (expecting `id`, `name`, `layout: Cell[][]`).
     *   [ ] Create `packages/backend/src/services/supabaseService.ts`.
-    *   [ ] Implement `SupabaseService` class with `getGrids()` and `getGridById()`.
+    *   [ ] Implement `SupabaseService` class (using the **anon key** client):
+        *   [ ] `async getGrids(): Promise<GridDefinitionFromDB[]>` (fetches `id`, `name`, `layout`).
+        *   [ ] `async getGridById(id: string): Promise<GridDefinitionFromDB | null>` (fetches `id`, `name`, `layout`).
+        *   *Note: This service now assumes the `layout` in Supabase is already the full JSONB `Cell[][]`.*
     *   [ ] Setup Jest/Vitest in `packages/backend`.
-    *   [ ] Write unit tests for `SupabaseService` (mocking `supabaseClient`).
-*   **[ ] (Est: 1-2 hours) Step 1.3: Backend Grid API Endpoints (Code + Integration Tests)**
+    *   [ ] Write unit tests for `SupabaseService` (mocking the `supabaseClient` that uses the ANON_KEY).
+*   **[ ] (Est: 1-1.5 hours) Step 1.5: Backend Grid API Endpoints (Code + Integration Tests)**
     *   [ ] Install `supertest @types/supertest` in `packages/backend`.
-    *   [ ] Create `packages/backend/src/controllers/gridController.ts` (`getAllGrids`, `getGridDetails`).
+    *   [ ] Create `packages/backend/src/controllers/gridController.ts` (`getAllGrids`, `getGridDetails` using the `SupabaseService`).
     *   [ ] Create `packages/backend/src/routes/gridRoutes.ts`.
     *   [ ] Mount grid router in `packages/backend/src/app.ts`.
     *   [ ] Write integration tests for `GET /api/grids` and `GET /api/grids/:id` (mocking `SupabaseService`).
 
 ## Phase 2: Backend - In-Memory Simulation State (Setup Logic) (Est: 3-5 hours)
+
+*(This phase and subsequent phases remain as they were, as they assume the grid data is available in the full `Cell[][]` format when fetched by `SupabaseService`)*
 
 ### Iteration 2: Simulation State & Setup APIs
 *   **[ ] (Est: 1.5-2.5 hours) Step 2.1: Backend SimulationStateService (Initial Setup) (Code + Unit Tests)**
@@ -61,8 +95,8 @@
     *   [ ] Create `packages/backend/src/services/simulationStateService.ts`.
     *   [ ] Implement `SimulationStateService` class:
         *   [ ] Properties for `currentGrid`, `robots`, `tasks`, `selectedStrategy`, `simulationStatus`, `simulationTime`.
-        *   [ ] `initializeSimulation()` method.
-        *   [ ] `addRobot()` method (with placement validation).
+        *   [ ] `initializeSimulation()` method (will receive full `Cell[][]` layout).
+        *   [ ] `addRobot()` method (with placement validation against `currentGrid`).
         *   [ ] `addTask()` method (with placement validation).
         *   [ ] `setStrategy()` method.
         *   [ ] Getter methods for state.
@@ -73,7 +107,7 @@
     *   [ ] Write unit tests for `SimulationStateService`.
 *   **[ ] (Est: 1.5-2.5 hours) Step 2.2: Backend Simulation Setup API Endpoints (Code + Integration Tests)**
     *   [ ] In `packages/backend/src/controllers/simulationController.ts`:
-        *   [ ] Implement `setupSimulation` endpoint logic.
+        *   [ ] Implement `setupSimulation` endpoint logic (fetches full grid from `SupabaseService` and passes to `SimulationStateService`).
         *   [ ] Implement `placeRobot` endpoint logic.
         *   [ ] Implement `placeTask` endpoint logic.
         *   [ ] Implement `selectStrategy` endpoint logic.
@@ -82,6 +116,7 @@
     *   [ ] Create/Update `packages/backend/src/routes/simulationSetupRoutes.ts`.
     *   [ ] Mount router in `app.ts`.
     *   [ ] Write integration tests for simulation setup API endpoints.
+
 
 ## Phase 3: Backend - Pathfinding & Core Engine Logic (Est: 4-7 hours)
 
