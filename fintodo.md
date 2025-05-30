@@ -27,15 +27,14 @@
     *   [ ] Define `Coordinates`, `CellType`, `Cell`, `TaskStatus`, `Task`, `RobotStatus`, `Robot` interfaces in `types.ts`.
 8    *   [ ] Ensure `packages/backend/tsconfig.json` and `packages/frontend/tsconfig.json` can reference `packages/common` (e.g., using `paths` or `references`).
     *   [ ] Test importing a type from `common` into a dummy file in `backend` and `frontend`.
-*   **[ ] (Est: 15-30 min) P0.4: Supabase Project Setup (Manual)**
-    *   [ ] Create a new Supabase project.
-    *   [ ] Note Supabase Project URL and Anon Key.
-    *   [ ] Update `packages/backend/.env` with `SUPABASE_URL` and `SUPABASE_ANON_KEY` and SERVICE_ROLE_KEY.
+
 ## Phase 1: Backend - Supabase Integration, Grid Seeding & API (Est: 3.5-6 hours)
 
 ### Iteration 1: Supabase Table & Grid Seeding Script (Focus on getting data IN)
-
-*   **[ ] (Est: 30-45 min) Step 1.1: Supabase `grids` Table Schema (Manual SQL)**
+*   **[ ] (Est: 15-30 min) P0.4 Step 1.1: Supabase Project Setup (Manual)**
+    *   [ ] Create a new Supabase project.
+    *   [ ] Note Supabase Project URL and Anon Key.
+    *   [ ] Update `packages/backend/.env` with `SUPABASE_URL` and `SUPABASE_ANON_KEY` and SERVICE_ROLE_KEY.
     *   [ ] In Supabase SQL Editor, create the `grids` table schema:
         ```sql
         CREATE TABLE public.grids (
