@@ -29,4 +29,5 @@ export interface Robot{
     currentPath?: Coordinates[];
     movementCostPerCell: number;
     consecutiveWaitSteps: number;
+    currentLocation: Coordinates;
 }
