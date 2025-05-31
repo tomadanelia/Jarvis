@@ -15,11 +15,8 @@ module.exports = {
     }],
   },
   moduleNameMapper: {
-    // If you use path aliases in tsconfig that Jest needs to understand
-    // Example: '^@common/(.*)$': '<rootDir>/../common/src/$1'
-    // Adjust the path based on your monorepo structure
-    // This helps Jest resolve imports like import { ... } from '@robot-sim/common';
-    '^@robot-sim/common/(.*)$': '<rootDir>/../common/src/$1',
+    // Updated to match the tsconfig.json path alias "@common/*"
+    '^@common/(.*)$': '<rootDir>/../common/src/$1',
   },
   // Optional: Setup files to run before each test file (e.g., for global mocks)
   // setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
