@@ -4,8 +4,14 @@ import { SupabaseService } from '../services/supabaseService';
 const supabaseService = new SupabaseService();
 
 
-// GET /api/grids
-// Returns an array of all grid definitions.
+/**
+ * Controller for handling GET requests to fetch all grids.
+ *
+ * @route GET /api/grids
+ * @param {Request} _req - The Express request object (unused).
+ * @param {Response} res - The Express response object used to return data or error.
+ * @returns {Promise<void>} - Sends a JSON response with all grid definitions or a 500 error.
+ */
  
 export const getAllGrids = async (
   _req: Request,
@@ -21,8 +27,14 @@ export const getAllGrids = async (
 };
 
 
-//GET /api/grids/:id
-// Returns a single grid by ID, or 404 if not found.
+/**
+ * Controller for handling GET requests to fetch a single grid by its ID.
+ *
+ * @route GET /api/grids/:id
+ * @param {Request} req - The Express request object containing the grid ID in params.
+ * @param {Response} res - The Express response object used to return data or error.
+ * @returns {Promise<void>} - Sends a JSON response with the grid or an appropriate error status.
+ */
  
 export const getGridDetails = async (
   req: Request,
