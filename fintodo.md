@@ -66,7 +66,7 @@
 
 ### Iteration 2: Backend Service and API for Grids (Focus on getting data OUT)
 
-*   **[ ] (Est: 1-2 hours) Step 1.4: Backend Supabase Service for Grids (Code + Unit Tests)**
+*   **[ ] (Est: 1-2 hours) Step 1.4: Backend Supabase Service for Grids (Code + Unit Tests)ჯკ**
     *   [ ] Install `@supabase/supabase-js` in `packages/backend` (if not already done, though seeding script would need it).
     *   [ ] Create `packages/backend/src/config/supabaseClient.ts` (this one will configure the client for the main API using the **ANON_KEY** for read-only access, distinct from the seeder's service role client).
     *   [ ] Define `GridDefinitionFromDB` interface in `services/supabaseService.ts` (expecting `id`, `name`, `layout: Cell[][]`).
