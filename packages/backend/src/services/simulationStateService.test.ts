@@ -1,6 +1,6 @@
-import { Cell, Robot } from "@common/types";
+import { Cell, Robot, TaskStatus } from "@common/types";
 import { SimulationStateService } from "./simulationStateService";
-import { DEFAULT_MOVEMENT_COST_PER_CELL, DEFAULT_ROBOT_ICON, DEFAULT_ROBOT_MAX_BATTERY, INITIAL_CONSECUTIVE_WAIT_STEPS } from "../config/constants";
+import { DEFAULT_BATTERY_COST_TO_PERFORM_TASK, DEFAULT_MOVEMENT_COST_PER_CELL, DEFAULT_ROBOT_ICON, DEFAULT_ROBOT_MAX_BATTERY, DEFAULT_TASK_WORK_DURATION, INITIAL_CONSECUTIVE_WAIT_STEPS } from "../config/constants";
 const mockWalkableCell: Cell = { type: 'walkable', coordinates: { x: 0, y: 0 } };
 const mockWallCell: Cell = { type: 'wall', coordinates: { x: 0, y: 0 } };
 const mockChargerCell: Cell = { type: 'chargingStation', coordinates: { x: 0, y: 0 } };
@@ -129,4 +129,60 @@ test("should add robot with correct attributes  if coordinates are valid", () =>
   let invalidRobot = simService.addRobot({ x: 1, y: 0 }, DEFAULT_ROBOT_ICON); // Wall cell
     expect(invalidRobot).toBeNull();
 });
+});
+
+describe("tests for addTask", () => {
+    let simService: SimulationStateService;
+
+    beforeEach(() => {
+        simService = new SimulationStateService();
+        simService.initializeSimulation("gridAddTaskTest", "TestGridForAddTask", detailedMockLayout);
+    });
+
+    test("should add task with correct attributes if coordinates are valid and walkable", () => {
+        const newTask = simService.addTask({ x: 0, y: 0 }); // Walkable cell
+        expect(newTask).not.toBeNull();
+        if (newTask) {
+            expect(typeof newTask.id).toBe("string");
+            expect(newTask.location).toEqual({ x: 0, y: 0 });
+            expect(newTask.status).toBe<TaskStatus>("unassigned");
+            expect(newTask.workDuration).toBe(DEFAULT_TASK_WORK_DURATION);
+            expect(newTask.batteryCostToPerform).toBe(DEFAULT_BATTERY_COST_TO_PERFORM_TASK);
+        }
+    });
+
+    test("should add task to tasks array on successful placement", () => {
+        const initialTaskCount = simService.getTasks().length;
+        const newTask = simService.addTask({ x: 1, y: 1 }); // Walkable cell
+        expect(newTask).not.toBeNull();
+        expect(simService.getTasks().length).toBe(initialTaskCount + 1);
+        expect(simService.getTasks()).toContainEqual(newTask);
+    });
+
+    test("should return null and not add task if placement is on a wall", () => {
+        const initialTasks = [...simService.getTasks()];
+        const newTask = simService.addTask({ x: 1, y: 0 }); 
+        expect(newTask).toBeNull();
+        expect(simService.getTasks()).toEqual(initialTasks);
+    });
+
+    test("should return null and not add task if placement is on a charging station", () => {
+        const initialTasks = [...simService.getTasks()];
+        const newTask = simService.addTask({ x: 2, y: 0 }); 
+        expect(newTask).toBeNull();
+        expect(simService.getTasks()).toEqual(initialTasks);
+    });
+
+    test("should return null and not add task if placement is on an empty cell", () => {
+        const initialTasks = [...simService.getTasks()];
+        const newTask = simService.addTask({ x: 0, y: 1 }); // Empty cell
+        expect(newTask).toBeNull();
+        expect(simService.getTasks()).toEqual(initialTasks);
+    });
+
+    test("should return null if no grid is loaded when adding task", () => {
+        const freshService = new SimulationStateService();
+        const newTask = freshService.addTask({ x: 0, y: 0 });
+        expect(newTask).toBeNull();
+    });
 });
