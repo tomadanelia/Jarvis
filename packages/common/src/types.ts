@@ -30,4 +30,5 @@ export interface Robot{
     movementCostPerCell: number;
     consecutiveWaitSteps: number;
     currentLocation: Coordinates;
+    initialLocation: Coordinates;
 }
