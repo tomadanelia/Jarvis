@@ -1,6 +1,6 @@
-import { Cell } from "@common/types";
+import { Cell, Robot } from "@common/types";
 import { SimulationStateService } from "./simulationStateService";
-
+import { DEFAULT_MOVEMENT_COST_PER_CELL, DEFAULT_ROBOT_ICON, DEFAULT_ROBOT_MAX_BATTERY, INITIAL_CONSECUTIVE_WAIT_STEPS } from "../config/constants";
 const mockWalkableCell: Cell = { type: 'walkable', coordinates: { x: 0, y: 0 } };
 const mockWallCell: Cell = { type: 'wall', coordinates: { x: 0, y: 0 } };
 const mockChargerCell: Cell = { type: 'chargingStation', coordinates: { x: 0, y: 0 } };
@@ -94,4 +94,39 @@ describe("tests for _isValidPlacement", () => {
     const freshService = new SimulationStateService(); 
     expect(freshService._isValidPlacement({ x: 0, y: 0 }, false)).toBe(false);
   });
+});
+describe("tests for addRobot",()=>{
+    let simService: SimulationStateService;
+    simService = new SimulationStateService();
+    simService.initializeSimulation("gridIdForPlacementTest", "PlacementTestGrid", detailedMockLayout);
+
+  
+test("should add robot with correct attributes  if coordinates are valid", () => {
+      let newRobot = simService.addRobot({ x: 0, y: 0 }, DEFAULT_ROBOT_ICON);
+
+    expect(newRobot).not.toBeNull();
+  if (newRobot) {
+    expect(typeof newRobot.id).toBe("string");
+    expect(newRobot.id.length).toBeGreaterThan(0); 
+    expect(newRobot.iconType).toBe(DEFAULT_ROBOT_ICON);
+    expect(newRobot.currentLocation).toEqual({ x: 0, y: 0 });
+    expect(newRobot.initialLocation).toEqual({ x: 0, y: 0 });
+    expect(newRobot.battery).toEqual(DEFAULT_ROBOT_MAX_BATTERY);
+    expect(newRobot.maxBattery).toEqual(DEFAULT_ROBOT_MAX_BATTERY);
+    expect(newRobot.status).toBe("idle");
+    expect(newRobot.assignedTaskId).toBeUndefined();
+    expect(newRobot.currentTarget).toBeUndefined();
+    expect(newRobot.currentPath).toBeUndefined();
+    expect(newRobot.movementCostPerCell).toBe(DEFAULT_MOVEMENT_COST_PER_CELL);
+    expect(newRobot.consecutiveWaitSteps).toBe(INITIAL_CONSECUTIVE_WAIT_STEPS);
+  }});
+  test("should add robot to robots array", () => {
+        let newRobot = simService.addRobot({ x: 0, y: 0 }, DEFAULT_ROBOT_ICON);
+        expect(simService.getRobots()).toContainEqual(newRobot);
+  });
+  //no meaning in testing edges of coordinates we have done it in _isValidPlacement testing
+  test("should return null if coordinates are invalid", () => {
+  let invalidRobot = simService.addRobot({ x: 1, y: 0 }, DEFAULT_ROBOT_ICON); // Wall cell
+    expect(invalidRobot).toBeNull();
+});
 });
