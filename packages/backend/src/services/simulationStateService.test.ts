@@ -186,3 +186,39 @@ describe("tests for addTask", () => {
         expect(newTask).toBeNull();
     });
 });
+describe("tests for deleteRobot", () => {
+    let simService: SimulationStateService;
+
+    beforeEach(() => {
+        simService = new SimulationStateService();
+        simService.initializeSimulation("gridIdForDeleteRobotTest", "DeleteRobotTestGrid", detailedMockLayout);
+    });
+
+    test("should delete a robot by id and return true", () => {
+        const robot = simService.addRobot({ x: 0, y: 0 }, DEFAULT_ROBOT_ICON);
+        expect(robot).not.toBeNull();
+        if (robot) {
+            const result = simService.deleteRobot(robot.id);
+            expect(result).toBe(true);
+            expect(simService.getRobots().find(r => r.id === robot.id)).toBeUndefined();
+        }
+    });
+
+    test("should return false if robot id does not exist", () => {
+        const result = simService.deleteRobot("non-existent-id");
+        expect(result).toBe(false);
+    });
+
+    test("should not delete other robots", () => {
+        const robot1 = simService.addRobot({ x: 0, y: 0 }, DEFAULT_ROBOT_ICON);
+        const robot2 = simService.addRobot({ x: 1, y: 1 }, DEFAULT_ROBOT_ICON);
+        expect(robot1).not.toBeNull();
+        expect(robot2).not.toBeNull();
+        if (robot1 && robot2) {
+            simService.deleteRobot(robot1.id);
+            const remainingRobots = simService.getRobots();
+            expect(remainingRobots.find(r => r.id === robot1.id)).toBeUndefined();
+            expect(remainingRobots.find(r => r.id === robot2.id)).toBeDefined();
+        }
+    });
+});
