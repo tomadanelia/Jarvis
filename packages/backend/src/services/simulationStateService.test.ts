@@ -222,3 +222,39 @@ describe("tests for deleteRobot", () => {
         }
     });
 });
+describe("tests for deleteTask", () => {
+    let simService: SimulationStateService;
+
+    beforeEach(() => {
+        simService = new SimulationStateService();
+        simService.initializeSimulation("gridIdForDeleteTaskTest", "DeleteTaskTestGrid", detailedMockLayout);
+    });
+
+    test("should delete a task by id and return true", () => {
+        const task = simService.addTask({ x: 0, y: 0 }); // Walkable cell
+        expect(task).not.toBeNull();
+        if (task) {
+            const result = simService.deleteTask(task.id);
+            expect(result).toBe(true);
+            expect(simService.getTasks().find(t => t.id === task.id)).toBeUndefined();
+        }
+    });
+
+    test("should return false if task id does not exist", () => {
+        const result = simService.deleteTask("non-existent-id");
+        expect(result).toBe(false);
+    });
+
+    test("should not delete other tasks", () => {
+        const task1 = simService.addTask({ x: 0, y: 0 });
+        const task2 = simService.addTask({ x: 1, y: 1 });
+        expect(task1).not.toBeNull();
+        expect(task2).not.toBeNull();
+        if (task1 && task2) {
+            simService.deleteTask(task1.id);
+            const remainingTasks = simService.getTasks();
+            expect(remainingTasks.find(t => t.id === task1.id)).toBeUndefined();
+            expect(remainingTasks.find(t => t.id === task2.id)).toBeDefined();
+        }
+    });
+});
