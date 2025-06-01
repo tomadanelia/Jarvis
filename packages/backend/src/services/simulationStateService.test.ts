@@ -1,4 +1,4 @@
-import { Cell, Robot, TaskStatus } from "@common/types";
+import { Cell, Robot, Task, TaskStatus } from "@common/types";
 import { SimulationStateService } from "./simulationStateService";
 import { DEFAULT_BATTERY_COST_TO_PERFORM_TASK, DEFAULT_MOVEMENT_COST_PER_CELL, DEFAULT_ROBOT_ICON, DEFAULT_ROBOT_MAX_BATTERY, DEFAULT_TASK_WORK_DURATION, INITIAL_CONSECUTIVE_WAIT_STEPS } from "../config/constants";
 const mockWalkableCell: Cell = { type: 'walkable', coordinates: { x: 0, y: 0 } };
@@ -242,6 +242,7 @@ describe("tests for deleteTask", () => {
 
     test("should return false if task id does not exist", () => {
         const result = simService.deleteTask("non-existent-id");
+       
         expect(result).toBe(false);
     });
 
@@ -256,5 +257,124 @@ describe("tests for deleteTask", () => {
             expect(remainingTasks.find(t => t.id === task1.id)).toBeUndefined();
             expect(remainingTasks.find(t => t.id === task2.id)).toBeDefined();
         }
+    });
+});
+describe("tests for updateRobotState", () => {
+    let simService: SimulationStateService;
+    let robot: Robot;
+
+    beforeEach(() => {
+        simService = new SimulationStateService();
+        simService.initializeSimulation("gridUpdateRobot", "UpdateRobotGrid", detailedMockLayout);
+        robot = simService.addRobot({ x: 0, y: 0 }, DEFAULT_ROBOT_ICON)!;
+    });
+
+    test("should update existing robot properties", () => {
+        const updated = simService.updateRobotState(robot.id, { status: "onChargingWay", battery: 42 });
+        expect(updated).not.toBeNull();
+        expect(updated!.status).toBe("onChargingWay");
+        expect(updated!.battery).toBe(42);
+    });
+
+    test("should not allow id to be changed", () => {
+        const updated = simService.updateRobotState(robot.id, { id: "new-id" } as any);
+        expect(updated).not.toBeNull();
+        expect(updated!.id).toBe(robot.id);
+    });
+
+    test("should return null for non-existent robot", () => {
+        const updated = simService.updateRobotState("non-existent-id", { status: "idle" });
+        expect(updated).toBeNull();
+    });
+});
+describe("tests for updateTaskState", () => {
+    let simService: SimulationStateService;
+    let task: Task;
+
+    beforeEach(() => {
+        simService = new SimulationStateService();
+        simService.initializeSimulation("gridUpdateTask", "UpdateTaskGrid", detailedMockLayout);
+        task = simService.addTask({ x: 0, y: 0 })!;
+    });
+
+    test("should update existing task properties", () => {
+        const updated = simService.updateTaskState(task.id, { status: "assigned", workDuration: 99 });
+        expect(updated).not.toBeNull();
+        expect(updated!.status).toBe("assigned");
+        expect(updated!.workDuration).toBe(99);
+    });
+
+    test("should not allow id to be changed", () => {
+        const updated = simService.updateTaskState(task.id, { id: "new-id" } as any);
+        expect(updated).not.toBeNull();
+        expect(updated!.id).toBe(task.id);
+    });
+
+    test("should return null for non-existent task", () => {
+        const updated = simService.updateTaskState("non-existent-id", { status: "assigned" });
+        expect(updated).toBeNull();
+    });
+});
+describe("tests for resetSimulationSetup", () => {
+    let simService: SimulationStateService;
+    let robot: Robot;
+    let task: Task;
+
+    beforeEach(() => {
+        simService = new SimulationStateService();
+        simService.initializeSimulation("gridResetTest", "ResetTestGrid", detailedMockLayout);
+        robot = simService.addRobot({ x: 0, y: 0 }, DEFAULT_ROBOT_ICON)!;
+        task = simService.addTask({ x: 1, y: 1 })!;
+        // Change robot and task state
+        simService.updateRobotState(robot.id, {
+            currentLocation: { x: 2, y: 2 },
+            battery: 10,
+            status: "onTaskWay",
+            assignedTaskId: task.id,
+            currentTarget: { x: 1, y: 1 },
+            currentPath: [{ x: 1, y: 1 }],
+            consecutiveWaitSteps: 99
+        });
+        simService.updateTaskState(task.id, { status: "assigned" });
+        simService.setSimulationStatus("running");
+        simService.incrementSimulationTime();
+    });
+
+    test("should reset robot currentLocation to initialLocation", () => {
+        simService.resetSimulationSetup();
+        const updatedRobot = simService.getRobotById(robot.id)!;
+        expect(updatedRobot.currentLocation).toEqual(updatedRobot.initialLocation);
+    });
+
+    test("should reset robot battery, status, assignedTaskId, etc.", () => {
+        simService.resetSimulationSetup();
+        const updatedRobot = simService.getRobotById(robot.id)!;
+        expect(updatedRobot.battery).toBe(updatedRobot.maxBattery);
+        expect(updatedRobot.status).toBe("idle");
+        expect(updatedRobot.assignedTaskId).toBeUndefined();
+        expect(updatedRobot.currentTarget).toBeUndefined();
+        expect(updatedRobot.currentPath).toBeUndefined();
+        expect(updatedRobot.consecutiveWaitSteps).toBe(INITIAL_CONSECUTIVE_WAIT_STEPS);
+    });
+
+    test("should reset task status", () => {
+        simService.resetSimulationSetup();
+        const updatedTask = simService.getTaskById(task.id)!;
+        expect(updatedTask.status).toBe("unassigned");
+    });
+
+    test("should reset simulationStatus and simulationTime", () => {
+        simService.resetSimulationSetup();
+        expect(simService.getSimulationStatus()).toBe("idle");
+        expect(simService.getSimulationTime()).toBe(0);
+    });
+
+    test("should preserve grid, strategy, and lists of robots/tasks", () => {
+        simService.setStrategy("nearest");
+        simService.resetSimulationSetup();
+        expect(simService.getCurrentGrid()).toEqual(detailedMockLayout);
+        expect(simService.getSelectedStrategy()).toBe("nearest");
+        expect(simService.getRobots().length).toBeGreaterThan(0);
+        expect(simService.getTasks().length).toBeGreaterThan(0);
     });
 });
