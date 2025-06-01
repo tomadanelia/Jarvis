@@ -20,7 +20,6 @@ import {
 
 export type SimulationStrategy = 'nearest' | 'round-robin';
 export type SimulationRunStatus = 'idle' | 'running' | 'paused';
-
 /**
  * Manages the state of the simulation setup and active runtime.
  * This includes the grid, robots, tasks, selected strategy, and simulation progress.
@@ -36,199 +35,199 @@ export class SimulationStateService {
     private selectedStrategy: SimulationStrategy | null = null;
     private simulationStatus: SimulationRunStatus = 'idle';
     private simulationTime: number = 0; 
-
-    /**
-     * Initializes a new simulation environment with a specific grid.
-     * Clears any existing robots and tasks. Resets simulation time and status.
-     * @param gridId - The unique identifier of the grid to load.
-     * @param gridName - The display name of the grid.
-     * @param gridLayout - The 2D array of Cell objects representing the grid structure.
-     */
+/**
+ * Initializes a new simulation environment with a specific grid.
+ * Clears any existing robots and tasks. Resets simulation time and status.
+ * @param gridId - The unique identifier of the grid to load.
+ * @param gridName - The display name of the grid.
+ * @param gridLayout - The 2D array of Cell objects representing the grid structure.
+ */
     public initializeSimulation(gridId: string, gridName: string, gridLayout: Cell[][]): void {
-        // Not implemented
+        console.log(`Initializing simulation with grid: ${gridName} (ID: ${gridId})`);
+        this.currentGrid = gridLayout;
+        this.currentGridId = gridId;
+        this.currentGridName = gridName;
+        this.robots = []; 
+        this.tasks = [];  
+        this.selectedStrategy = null; // Or keep current strategy? Decide on behavior. Let's reset it.
+        this.simulationStatus = 'idle';
+        this.simulationTime = 0;
     }
 
-    /**
-     * Gets the current grid layout.
-     */
     public getCurrentGrid(): Cell[][] | null {
-        // Not implemented
-        return null;
+        return this.currentGrid;
     }
 
-    /**
-     * Gets the current grid ID.
-     */
     public getCurrentGridId(): string | null {
-        // Not implemented
-        return null;
+        return this.currentGridId;
     }
 
-    /**
-     * Gets the current grid name.
-     */
     public getCurrentGridName(): string | null {
-        // Not implemented
-        return null;
+        return this.currentGridName;
     }
-
-    /**
-     * Adds a new robot to the simulation at the specified location.
-     * Robots can be placed on 'walkable' or 'charging_station' cells.
-     * @param location - The coordinates where the robot should be placed.
-     * @param iconType - The string identifier for the robot's visual icon.
-     * @returns The newly created Robot object, or null if placement is invalid or simulation is active.
-     */
+/**
+ * Adds a new robot to the simulation at the specified location.
+ * Robots can be placed on 'walkable' or 'charging_station' cells.
+ * @param location - The coordinates where the robot should be placed.
+ * @param iconType - The string identifier for the robot's visual icon.
+ * @returns The newly created Robot object, or null if placement is invalid or simulation is active.
+ */
     public addRobot(location: Coordinates, iconType: string): Robot | null {
-        // Not implemented
-        return null;
+        if (!this.currentGrid) {
+            console.warn("SIM_STATE_SERVICE: Cannot add robot, no grid loaded.");
+            return null;
+        }
+        if (!this._isValidPlacement(location, true)) { // true allows placement on charging_station
+            console.warn(`SIM_STATE_SERVICE: Invalid placement for robot at (${location.x}, ${location.y}).`);
+            return null;
+        }
+
+        const newRobot: Robot = {
+            id: uuidv4(),
+            iconType: iconType,
+            currentLocation: { ...location },
+            initialLocation:{...location},
+            battery: DEFAULT_ROBOT_MAX_BATTERY,
+            maxBattery: DEFAULT_ROBOT_MAX_BATTERY,
+            status: 'idle',
+            assignedTaskId: undefined,
+            currentTarget: undefined,
+            currentPath: undefined,
+            movementCostPerCell: DEFAULT_MOVEMENT_COST_PER_CELL,
+            consecutiveWaitSteps: INITIAL_CONSECUTIVE_WAIT_STEPS,
+        };
+        this.robots.push(newRobot);
+        console.log(`SIM_STATE_SERVICE: Robot ${newRobot.id} added at (${location.x}, ${location.y})`);
+        return newRobot;
     }
 
-    /**
-     * Gets all robots in the simulation.
-     */
     public getRobots(): Robot[] {
-        // Not implemented
-        return [];
+        return [...this.robots]; 
     }
 
-    /**
-     * Gets a robot by its ID.
-     * @param robotId - The ID of the robot.
-     */
     public getRobotById(robotId: string): Robot | undefined {
-        // Not implemented
-        return undefined;
+        return this.robots.find(r => r.id === robotId);
     }
 
-    /**
-     * Deletes a robot by its ID.
-     * @param id - The ID of the robot to delete.
-     * @returns True if deleted, false if not found.
-     */
-    public deleteRobot(id: string): boolean {
-        // Not implemented
-        return false;
-    }
 
-    /**
-     * Deletes a task by its ID.
-     * @param id - The ID of the task to delete.
-     * @returns True if deleted, false if not found.
-     */
-    public deleteTask(id: string): boolean {
-        // Not implemented
-        return false;
+public deleteRobot(id: string): boolean {
+    const index = this.robots.findIndex(roboti => roboti.id === id);
+    if (index !== -1) {
+        this.robots.splice(index, 1);
+        return true;
     }
-
-    /**
-     * Updates the state of a robot.
-     * @param robotId - The ID of the robot.
-     * @param updates - Partial robot properties to update (except id).
-     * @returns The updated robot, or null if not found.
-     */
+    return false;
+} 
+public deleteTask(id: string): boolean {
+    const index = this.tasks.findIndex(task => task.id === id); 
+    if (index !== -1) {
+        this.tasks.splice(index, 1);
+        return true;
+    }
+    return false;
+}
     public updateRobotState(robotId: string, updates: Partial<Omit<Robot, 'id'>>): Robot | null {
-        // Not implemented
-        return null;
+        const robot = this.getRobotById(robotId);
+        if (!robot) {
+            console.warn(`SIM_STATE_SERVICE: Robot with ID ${robotId} not found for update.`);
+            return null;
+        }
+        const { id, ...restOfUpdates } = updates as any; 
+        Object.assign(robot, restOfUpdates);
+        return robot;
     }
-
-    /**
-     * Adds a new task to the simulation at the specified location.
-     * @param location - The coordinates where the task should be placed.
-     * @returns The newly created Task object, or null if placement is invalid.
-     */
+    
     public addTask(location: Coordinates): Task | null {
-        // Not implemented
-        return null;
+        if (!this.currentGrid) {
+            console.warn("SIM_STATE_SERVICE: Cannot add task, no grid loaded.");
+            return null;
+        }
+        if (!this._isValidPlacement(location, false)) { // true allows placement on charging_station
+            console.warn(`SIM_STATE_SERVICE: Invalid placement for robot at (${location.x}, ${location.y}).`);
+            return null;
+        }
+    const newTask:Task={
+     id: uuidv4(),
+    location:{...location},
+    status:"unassigned",
+    workDuration:DEFAULT_TASK_WORK_DURATION,
+    batteryCostToPerform:DEFAULT_BATTERY_COST_TO_PERFORM_TASK,
     }
+    this.tasks.push(newTask);
+       return newTask;
+    }
+    
 
-    /**
-     * Gets all tasks in the simulation.
-     */
     public getTasks(): Task[] {
-        // Not implemented
-        return [];
+        return [...this.tasks]; 
     }
 
-    /**
-     * Gets a task by its ID.
-     * @param taskId - The ID of the task.
-     */
     public getTaskById(taskId: string): Task | undefined {
-        // Not implemented
-        return undefined;
+        return this.tasks.find(t => t.id === taskId);
     }
 
-    /**
-     * Updates the state of a task.
-     * @param taskId - The ID of the task.
-     * @param updates - Partial task properties to update (except id).
-     * @returns The updated task, or null if not found.
-     */
     public updateTaskState(taskId: string, updates: Partial<Omit<Task, 'id'>>): Task | null {
-        // Not implemented
-        return null;
+        const task = this.getTaskById(taskId);
+        if (!task) {
+            console.warn(`SIM_STATE_SERVICE: Task with ID ${taskId} not found for update.`);
+            return null;
+        }
+        const { id, ...restOfUpdates } = updates as any;
+        Object.assign(task, restOfUpdates);
+        return task;
     }
 
-    /**
-     * Sets the simulation strategy.
-     * @param strategy - The strategy to use.
-     */
     public setStrategy(strategy: SimulationStrategy): void {
-        // Not implemented
+        this.selectedStrategy = strategy;
+        console.log(`SIM_STATE_SERVICE: Strategy set to ${strategy}`);
     }
 
-    /**
-     * Gets the selected simulation strategy.
-     */
     public getSelectedStrategy(): SimulationStrategy | null {
-        // Not implemented
-        return null;
+        return this.selectedStrategy;
     }
 
-    /**
-     * Sets the simulation status.
-     * @param status - The new simulation status.
-     */
     public setSimulationStatus(status: SimulationRunStatus): void {
-        // Not implemented
+        this.simulationStatus = status;
+        console.log(`SIM_STATE_SERVICE: Simulation status set to ${status}`);
     }
 
-    /**
-     * Gets the current simulation status.
-     */
     public getSimulationStatus(): SimulationRunStatus {
-        // Not implemented
-        return 'idle';
+        return this.simulationStatus;
     }
 
-    /**
-     * Increments the simulation time.
-     */
     public incrementSimulationTime(): void {
-        // Not implemented
+        this.simulationTime++;
     }
 
-    /**
-     * Resets the simulation time to zero.
-     */
     public resetSimulationTime(): void {
-        // Not implemented
+        this.simulationTime = 0;
     }
 
-    /**
-     * Gets the current simulation time.
-     */
     public getSimulationTime(): number {
-        // Not implemented
-        return 0;
+        return this.simulationTime;
     }
 
-    /**
-     * Resets the simulation setup, including robots and tasks, to their initial states.
-     */
+    // --- Simulation Reset ---
     public resetSimulationSetup(): void {
-        // Not implemented
+        console.log("SIM_STATE_SERVICE: Resetting simulation setup.");
+        this.robots.forEach(robot => {
+            
+            robot.currentLocation=robot.initialLocation;
+            robot.battery = robot.maxBattery; // Full battery
+            robot.status = 'idle';
+            robot.assignedTaskId = undefined;
+            robot.currentTarget = undefined;
+            robot.currentPath = undefined;
+            robot.consecutiveWaitSteps = INITIAL_CONSECUTIVE_WAIT_STEPS;
+        });
+
+        this.tasks.forEach(task => {
+            task.status = 'unassigned';
+        });
+
+        this.simulationStatus = 'idle';
+        this.simulationTime = 0;
+        console.log("SIM_STATE_SERVICE: Robots and tasks reset to initial states.");
     }
 
     /**
@@ -238,8 +237,33 @@ export class SimulationStateService {
      *                               Otherwise, only 'walkable' is allowed.
      * @returns boolean True if valid placement, false otherwise.
      */
-    private _isValidPlacement(location: Coordinates, allowOnChargerStation: boolean = false): boolean {
-        // Not implemented
+    public _isValidPlacement(location: Coordinates, allowOnChargerStation: boolean = false): boolean {
+        if (!this.currentGrid) {
+            return false;  
+        }
+        const { x, y } = location;
+//actually there no difference this.currentGrid[y] or this.currentGrid[0] all are same size
+        if (y < 0 || y >= this.currentGrid.length || !this.currentGrid[y] || x < 0 || x >= this.currentGrid[y].length) {
+            console.warn(`SIM_STATE_SERVICE: Placement out of bounds at (${x}, ${y}).`);
+            return false;
+        }
+
+        const cell: Cell | undefined = this.currentGrid[y][x];
+        if (!cell) {
+            console.warn(`SIM_STATE_SERVICE: No cell data at (${x}, ${y}) - grid might be improperly formed.`);
+            return false; 
+        }
+
+        const targetCellType = cell.type;
+
+        if (targetCellType === 'walkable') {
+            return true;
+        }
+        if (allowOnChargerStation && targetCellType === 'chargingStation') {
+            return true;
+        }
+
+        console.warn(`SIM_STATE_SERVICE: Cannot place on cell type '${targetCellType}' at (${x}, ${y}) with allowOnChargerStation=${allowOnChargerStation}.`);
         return false;
     }
 }
