@@ -107,7 +107,7 @@
 *   **[ ] (Est: 1.5-2.5 hours) Step 2.2: Backend Simulation Setup API Endpoints (Code + Integration Tests)**
     *   [ ] In `packages/backend/src/controllers/simulationController.ts`:
         *   [ ] Implement `setupSimulation` endpoint logic (fetches full grid from `SupabaseService` and passes to `SimulationStateService`).
-        *   [ ] Implement `placeRobot` endpoint logic.
+        *   [ ] Implement `placeRobot` endpoint =logic.
         *   [ ] Implement `placeTask` endpoint logic.
         *   [ ] Implement `selectStrategy` endpoint logic.
         *   [ ] Implement `resetSimulationSetupEndpoint` logic.
