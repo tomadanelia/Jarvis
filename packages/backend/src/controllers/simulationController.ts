@@ -32,7 +32,8 @@ export const placeRobot= async (req:Request,res:Response ):Promise<void>=>{
     }
     const robot=simulationStateService.addRobot(location,iconType);
     if (robot==null){
-        throw new Error("could not add there invalid   placement");
+         res.status(400).json({ error: "invalid placement location for task" });
+        return;
     }
     res.status(200).json({robot});
     } catch (error) {
@@ -48,8 +49,8 @@ export const placeTask= async (req:Request,res:Response ):Promise<void>=>{
     }
     const task=simulationStateService.addTask(location);
     if (task==null){
-        throw new Error("could not add there invalid   placement");
-    }
+        res.status(400).json({ error: "invalid placement location for task" });
+        return;}
     res.status(200).json({task});
     } catch (error) {
         res.status(500).json({ error: "Internal server error" });
@@ -67,10 +68,6 @@ export const selectStrategy = async (
         }
     
         simulationStateService.setStrategy(strategy);
-        if (!simulationStateService.getSelectedStrategy()) {
-            res.status(404).json({ error: "Strategy not found" });
-            return;
-        }
     
         res.status(200).json({ message: "Strategy selected successfully" });
     } catch (error) {
