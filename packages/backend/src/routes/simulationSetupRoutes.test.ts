@@ -194,21 +194,21 @@ describe('Simulation Setup Routes API', () => {
 
         
         it('should place a task at a valid location', async () => {
-            addTaskMock.mockReturnValueOnce(mockTask); // Mock SimulationStateService
+            addTaskMock.mockReturnValueOnce(mockTask); 
 
             const res = await request(app)
                 .post('/api/simulation/placeTask')
-                .send(taskLocation); // Send { x, y } directly
+                .send(taskLocation); 
 
-            expect(res.status).toBe(200); // Controller returns 200 on success
+            expect(res.status).toBe(200); 
             expect(res.body).toEqual({ task: mockTask });
             expect(addTaskMock).toHaveBeenCalledTimes(1);
             expect(addTaskMock).toHaveBeenCalledWith(taskLocation);
         });
 
         it('should return 400 if location is invalid (as determined by SimulationStateService)', async () => {
-            const invalidLocation = { x: 1, y: 0 }; // Wall in mockGridLayout
-            addTaskMock.mockReturnValueOnce(null); // Mock SimulationStateService returns null for invalid
+            const invalidLocation = { x: 1, y: 0 }; 
+            addTaskMock.mockReturnValueOnce(null); 
 
             const res = await request(app)
                 .post('/api/simulation/placeTask')
@@ -227,7 +227,6 @@ describe('Simulation Setup Routes API', () => {
                 .send({ y: 1 });
 
             expect(res.status).toBe(400);
-             // Note: Controller message is general for bad params, copied from placeRobot
             expect(res.body).toEqual({ error: 'invalid parameters for placeRobot controler' });
             expect(addTaskMock).not.toHaveBeenCalled();
         });
@@ -237,7 +236,6 @@ describe('Simulation Setup Routes API', () => {
                 .send({ x: 1 });
 
             expect(res.status).toBe(400);
-            // Note: Controller message is general for bad params, copied from placeRobot
             expect(res.body).toEqual({ error: 'invalid parameters for placeRobot controler' });
             expect(addTaskMock).not.toHaveBeenCalled();
         });
@@ -343,4 +341,86 @@ describe('POST /api/simulation/resetSetup', () => {
         });
     });
 
+describe('GET /api/simulation/getSetupState', () => {
+        it('should return the current simulation setup state', async () => {
+            // Mock all the getters that the controller uses
+            const mockGridId = 'some-grid-id';
+            const mockGridName = 'Some Grid';
+            const mockRobots = [{ id: 'r1', status: 'idle' }];
+            const mockTasks = [{ id: 't1', status: 'unassigned' }];
+            const mockStrategy = 'nearest';
+            const mockStatus = 'idle';
+            const mockTime = 0;
+
+            getCurrentGridMock.mockReturnValueOnce(mockGridLayout);
+            getCurrentGridIdMock.mockReturnValueOnce(mockGridId);
+            getCurrentGridNameMock.mockReturnValueOnce(mockGridName);
+            getRobotsMock.mockReturnValueOnce(mockRobots);
+            getTasksMock.mockReturnValueOnce(mockTasks);
+            getSelectedStrategyMock.mockReturnValueOnce(mockStrategy);
+            getSimulationStatusMock.mockReturnValueOnce(mockStatus);
+            getSimulationTimeMock.mockReturnValueOnce(mockTime);
+
+
+            const res = await request(app).get('/api/simulation/getSetupState');
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                currentGrid: mockGridLayout,
+                gridId: mockGridId,
+                gridName: mockGridName,
+                robots: mockRobots,
+                tasks: mockTasks,
+                selectedStrategy: mockStrategy,
+                simulationStatus: mockStatus,
+                simulationTime: mockTime,
+            });
+
+            // Verify all necessary getters were called
+            expect(getCurrentGridMock).toHaveBeenCalledTimes(1);
+            expect(getCurrentGridIdMock).toHaveBeenCalledTimes(1);
+            expect(getCurrentGridNameMock).toHaveBeenCalledTimes(1);
+            expect(getRobotsMock).toHaveBeenCalledTimes(1);
+            expect(getTasksMock).toHaveBeenCalledTimes(1);
+            expect(getSelectedStrategyMock).toHaveBeenCalledTimes(1);
+            expect(getSimulationStatusMock).toHaveBeenCalledTimes(1);
+            expect(getSimulationTimeMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return state with nulls/empty arrays if no grid is initialized', async () => {
+
+            const res = await request(app).get('/api/simulation/getSetupState');
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                currentGrid: null,
+                gridId: null,
+                gridName: null,
+                robots: [],
+                tasks: [],
+                selectedStrategy: null,
+                simulationStatus: 'idle',
+                simulationTime: 0,
+            });
+            expect(getCurrentGridMock).toHaveBeenCalledTimes(1);
+            expect(getCurrentGridIdMock).toHaveBeenCalledTimes(1);
+            expect(getCurrentGridNameMock).toHaveBeenCalledTimes(1);
+            expect(getRobotsMock).toHaveBeenCalledTimes(1);
+            expect(getTasksMock).toHaveBeenCalledTimes(1);
+            expect(getSelectedStrategyMock).toHaveBeenCalledTimes(1);
+            expect(getSimulationStatusMock).toHaveBeenCalledTimes(1);
+            expect(getSimulationTimeMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return 500 if SimulationStateService getter throws an error', async () => {
+            const mockError = new Error('State service getter error');
+            getCurrentGridMock.mockImplementationOnce(() => { throw mockError; }); // Mock one getter to throw
+
+            const res = await request(app).get('/api/simulation/getSetupState');
+
+            expect(res.status).toBe(500);
+            expect(res.body).toEqual({ error: 'Internal server error' });
+            expect(getCurrentGridMock).toHaveBeenCalledTimes(1);
+        });
+    });
 });
