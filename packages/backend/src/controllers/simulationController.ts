@@ -23,3 +23,19 @@ export const simulationSetUp = async (
     res.status(500).json({ error: "Internal server error" });
   }
 };
+export const placeRobot= async (req:Request,res:Response ):Promise<void>=>{
+    try {
+    const {location,iconType}=req.body;
+        if (!iconType || typeof iconType !== "string" || typeof location.x !== "number" || typeof location.y!=="number" ) {
+      res.status(404).json({ error: "invalid parameters for placeRobot controler" });
+      return;
+    }
+    const flag=simulationStateService.addRobot(location,iconType);
+    if (flag==null){
+        throw new Error("could not add there invalid   placement");
+    }
+    res.status(200);
+    } catch (error) {
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
