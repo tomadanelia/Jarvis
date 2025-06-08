@@ -257,4 +257,69 @@ describe('Simulation Setup Routes API', () => {
         });
     });
 
+describe('POST /api/simulation/selectStrategy', () => {
+        it('should set strategy to "nearest"', async () => {
+            const strategy = 'nearest';
+
+            const res = await request(app)
+                .post('/api/simulation/selectStrategy')
+                .send({ strategy });
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({ message: 'Strategy selected successfully' });
+            expect(setStrategyMock).toHaveBeenCalledTimes(1);
+            expect(setStrategyMock).toHaveBeenCalledWith(strategy);
+        });
+
+        it('should set strategy to "round-robin"', async () => {
+            const strategy = 'round-robin';
+
+            const res = await request(app)
+                .post('/api/simulation/selectStrategy')
+                .send({ strategy });
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({ message: 'Strategy selected successfully' });
+            expect(setStrategyMock).toHaveBeenCalledTimes(1);
+            expect(setStrategyMock).toHaveBeenCalledWith(strategy);
+        });
+
+        it('should return 400 for an invalid strategy', async () => {
+            const strategy = 'invalid-strategy';
+
+            const res = await request(app)
+                .post('/api/simulation/selectStrategy')
+                .send({ strategy });
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({ error: 'Invalid strategy parameter' });
+            expect(setStrategyMock).not.toHaveBeenCalled();
+        });
+
+         it('should return 400 if strategy is missing', async () => {
+            const res = await request(app)
+                .post('/api/simulation/selectStrategy')
+                .send({});
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({ error: 'Invalid strategy parameter' });
+            expect(setStrategyMock).not.toHaveBeenCalled();
+        });
+
+
+        it('should return 500 if SimulationStateService throws an error', async () => {
+            const strategy = 'nearest';
+            const mockError = new Error('State service error');
+            setStrategyMock.mockImplementationOnce(() => { throw mockError; }); // Mock SimulationStateService throws
+
+            const res = await request(app)
+                .post('/api/simulation/selectStrategy')
+                .send({ strategy });
+
+            expect(res.status).toBe(500);
+            expect(res.body).toEqual({ error: 'Internal server error' });
+            expect(setStrategyMock).toHaveBeenCalledTimes(1); // It is called before the error is thrown
+        });
+    });
+
 });
