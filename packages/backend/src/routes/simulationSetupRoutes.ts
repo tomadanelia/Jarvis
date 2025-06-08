@@ -1,0 +1,10 @@
+import {Router} from 'express';
+import {  simulationSetUp } from 'src/controllers/simulationController';
+const router= Router();
+router.get("/setUp/:id", simulationSetUp);
+router.get("/placeRobot");
+router.get("/placeTask");
+router.get("/selectStrategy");
+router.get("/resetSetup");
+router.get("/getSetupState");
+export default router;

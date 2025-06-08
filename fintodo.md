@@ -16,7 +16,7 @@
     *   [ ] Create `packages/backend/src/app.ts` (Express app config: cors, json).
     *   [ ] Create `packages/backend/.env` with `PORT`.
     *   [ ] Add `npm start` script to `packages/backend/package.json`.
-*   **[ ] (Est: 30-45 min) P0.3 & P0.2 (Partial): Frontend Basic Setup**
+*   **[ ] (Est: 30-45 min) P0.3 & P0.2 (Partial): Frontend Basic Setup**w
     *   [ ] `cd packages/frontend`, `npm create vite@latest . -- --template react-ts`.
     *   [ ] `npm install` in `packages/frontend`.
     *   [ ] Create `packages/frontend/tsconfig.json` (Vite usually does this, verify).

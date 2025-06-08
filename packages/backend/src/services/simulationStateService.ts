@@ -267,3 +267,5 @@ public deleteTask(id: string): boolean {
         return false;
     }
 }
+const simulationStateService = new SimulationStateService();
+export { simulationStateService };
