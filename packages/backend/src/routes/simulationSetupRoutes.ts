@@ -1,10 +1,10 @@
 import {Router} from 'express';
-import {  placeRobot, simulationSetUp } from 'src/controllers/simulationController';
+import {  placeRobot, placeTask, simulationSetUp ,selectStrategy,getSetupState,resetSetup} from 'src/controllers/simulationController';
 const router= Router();
 router.post("/setUp/:id", simulationSetUp);
 router.post("/placeRobot",placeRobot);
-router.post("/placeTask");
-router.post("/selectStrategy");
-router.post("/resetSetup");
-router.get("/getSetupState");
+router.post("/placeTask",placeTask);
+router.post("/selectStrategy",selectStrategy);
+router.post("/resetSetup",resetSetup);
+router.get("/getSetupState",getSetupState);
 export default router;
