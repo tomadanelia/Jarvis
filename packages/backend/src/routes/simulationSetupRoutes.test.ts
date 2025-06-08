@@ -187,4 +187,74 @@ describe('Simulation Setup Routes API', () => {
             expect(addRobotMock).toHaveBeenCalledTimes(1);
         });
     });
+
+    describe('POST /api/simulation/placeTask', () => {
+        const taskLocation = { x: 1, y: 1 }; // Valid placement location in mockGridLayout
+        const mockTask = { id: 'task-456', location: taskLocation, status: 'unassigned' };
+
+        
+        it('should place a task at a valid location', async () => {
+            addTaskMock.mockReturnValueOnce(mockTask); // Mock SimulationStateService
+
+            const res = await request(app)
+                .post('/api/simulation/placeTask')
+                .send(taskLocation); // Send { x, y } directly
+
+            expect(res.status).toBe(200); // Controller returns 200 on success
+            expect(res.body).toEqual({ task: mockTask });
+            expect(addTaskMock).toHaveBeenCalledTimes(1);
+            expect(addTaskMock).toHaveBeenCalledWith(taskLocation);
+        });
+
+        it('should return 400 if location is invalid (as determined by SimulationStateService)', async () => {
+            const invalidLocation = { x: 1, y: 0 }; // Wall in mockGridLayout
+            addTaskMock.mockReturnValueOnce(null); // Mock SimulationStateService returns null for invalid
+
+            const res = await request(app)
+                .post('/api/simulation/placeTask')
+                .send(invalidLocation);
+
+            expect(res.status).toBe(400);
+             // Note: Controller message is general for bad params
+            expect(res.body).toEqual({ error: 'invalid placement location for task' });
+            expect(addTaskMock).toHaveBeenCalledTimes(1);
+            expect(addTaskMock).toHaveBeenCalledWith(invalidLocation);
+        });
+
+        it('should return 400 if x coordinate is missing', async () => {
+            const res = await request(app)
+                .post('/api/simulation/placeTask')
+                .send({ y: 1 });
+
+            expect(res.status).toBe(400);
+             // Note: Controller message is general for bad params, copied from placeRobot
+            expect(res.body).toEqual({ error: 'invalid parameters for placeRobot controler' });
+            expect(addTaskMock).not.toHaveBeenCalled();
+        });
+         it('should return 400 if y coordinate is missing', async () => {
+            const res = await request(app)
+                .post('/api/simulation/placeTask')
+                .send({ x: 1 });
+
+            expect(res.status).toBe(400);
+            // Note: Controller message is general for bad params, copied from placeRobot
+            expect(res.body).toEqual({ error: 'invalid parameters for placeRobot controler' });
+            expect(addTaskMock).not.toHaveBeenCalled();
+        });
+
+
+        it('should return 500 if SimulationStateService throws an error', async () => {
+             const mockError = new Error('State service error');
+            addTaskMock.mockImplementationOnce(() => { throw mockError; }); // Mock SimulationStateService throws
+
+            const res = await request(app)
+                .post('/api/simulation/placeTask')
+                .send(taskLocation);
+
+            expect(res.status).toBe(500);
+            expect(res.body).toEqual({ error: 'Internal server error' });
+            expect(addTaskMock).toHaveBeenCalledTimes(1);
+        });
+    });
+
 });
