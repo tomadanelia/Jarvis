@@ -322,4 +322,25 @@ describe('POST /api/simulation/selectStrategy', () => {
         });
     });
 
+describe('POST /api/simulation/resetSetup', () => {
+        it('should reset the simulation setup', async () => {
+            const res = await request(app).post('/api/simulation/resetSetup');
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({ message: 'Simulation reset successfully' });
+            expect(resetSimulationSetupMock).toHaveBeenCalledTimes(1);
+        });
+
+         it('should return 500 if SimulationStateService throws an error', async () => {
+            const mockError = new Error('State service error');
+            resetSimulationSetupMock.mockImplementationOnce(() => { throw mockError; }); // Mock SimulationStateService throws
+
+            const res = await request(app).post('/api/simulation/resetSetup');
+
+            expect(res.status).toBe(500);
+            expect(res.body).toEqual({ error: 'Internal server error' });
+            expect(resetSimulationSetupMock).toHaveBeenCalledTimes(1);
+        });
+    });
+
 });
