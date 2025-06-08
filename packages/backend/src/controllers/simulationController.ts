@@ -26,7 +26,7 @@ export const simulationSetUp = async (
 export const placeRobot= async (req:Request,res:Response ):Promise<void>=>{
     try {
     const {location,iconType}=req.body;
-        if (!iconType || typeof iconType !== "string" || typeof location.x !== "number" || typeof location.y!=="number" ) {
+        if (!location||!iconType || typeof iconType !== "string" || typeof location.x !== "number" || typeof location.y!=="number" ) {
       res.status(400).json({ error: "invalid parameters for placeRobot controler" });
       return;
     }
@@ -43,7 +43,7 @@ export const placeRobot= async (req:Request,res:Response ):Promise<void>=>{
 export const placeTask= async (req:Request,res:Response ):Promise<void>=>{
     try {
     const location=req.body;
-        if (typeof location.x !== "number" || typeof location.y!=="number" ) {
+        if (!location||typeof location.x !== "number" || typeof location.y!=="number" ) {
       res.status(400).json({ error: "invalid parameters for placeRobot controler" });
       return;
     }
