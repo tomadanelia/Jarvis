@@ -120,4 +120,71 @@ describe('Simulation Setup Routes API', () => {
         });
     });
 
+   describe('POST /api/simulation/placeRobot', () => {
+        const robotLocation = { x: 0, y: 0 }; 
+        const iconType = 'robot_icon_green.png';
+        const mockRobot = { id: 'robot-123', currentLocation: robotLocation, iconType, battery: 100, status: 'idle' };
+
+        it('should place a robot at a valid location', async () => {
+            addRobotMock.mockReturnValueOnce(mockRobot);
+
+            const res = await request(app)
+                .post('/api/simulation/placeRobot')
+                .send({ location: robotLocation, iconType });
+
+            expect(res.status).toBe(200); 
+            expect(res.body).toEqual({ robot: mockRobot });
+            expect(addRobotMock).toHaveBeenCalledTimes(1);
+            expect(addRobotMock).toHaveBeenCalledWith(robotLocation, iconType);
+        });
+
+        it('should return 400 if location is invalid (as determined by SimulationStateService)', async () => {
+            const invalidLocation = { x: 1, y: 0 }; 
+            addRobotMock.mockReturnValueOnce(null); 
+
+            const res = await request(app)
+                .post('/api/simulation/placeRobot')
+                .send({ location: invalidLocation, iconType });
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({ error: 'invalid placement location for task' });
+            expect(addRobotMock).toHaveBeenCalledTimes(1);
+            expect(addRobotMock).toHaveBeenCalledWith(invalidLocation, iconType);
+        });
+
+        it('should return 400 if iconType is missing', async () => {
+            const res = await request(app)
+                .post('/api/simulation/placeRobot')
+                .send({ location: robotLocation });
+
+            expect(res.status).toBe(400);
+            // Note: Controller message is general for bad params
+            expect(res.body).toEqual({ error: 'invalid parameters for placeRobot controler' });
+            expect(addRobotMock).not.toHaveBeenCalled();
+        });
+
+         it('should return 400 if location is missing', async () => {
+            const res = await request(app)
+                .post('/api/simulation/placeRobot')
+                .send({ iconType });
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({ error: 'invalid parameters for placeRobot controler' });
+            expect(addRobotMock).not.toHaveBeenCalled();
+        });
+
+
+        it('should return 500 if SimulationStateService throws an error', async () => {
+            const mockError = new Error('State service error');
+            addRobotMock.mockImplementationOnce(() => { throw mockError; }); // Mock SimulationStateService throws
+
+            const res = await request(app)
+                .post('/api/simulation/placeRobot')
+                .send({ location: robotLocation, iconType });
+
+            expect(res.status).toBe(500);
+            expect(res.body).toEqual({ error: 'Internal server error' });
+            expect(addRobotMock).toHaveBeenCalledTimes(1);
+        });
+    });
 });
