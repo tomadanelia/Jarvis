@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {  placeRobot, placeTask, simulationSetUp ,selectStrategy,getSetupState,resetSetup} from 'src/controllers/simulationController';
+import { placeRobot, placeTask, simulationSetUp, selectStrategy, getSetupState, resetSetup } from '../controllers/simulationController';
 const router= Router();
 router.post("/setUp/:id", simulationSetUp);
 router.post("/placeRobot",placeRobot);
