@@ -57,5 +57,19 @@ describe('Pathfinding Service', () => {
     
         expect(path).toEqual([]);
     });
+    it('should return same when start and end are same', () => {
+        const start: Coordinates = { x: 0, y: 0 };
+        const end: Coordinates = { x: 0, y: 0 };
+        const path = findPath(grid, start, end);
+    
+        expect(path).toEqual([{ x: 0, y: 0 }]);
+    });
+    it('should throw an error for invalid grid', () => {
+        const invalidGrid: Cell[][] = [];
+        const start: Coordinates = { x: 0, y: 0 };
+        const end: Coordinates = { x: 1, y: 1 };
+    
+        expect(() => findPath(invalidGrid, start, end)).toThrow("Invalid grid provided for pathfinding.");
+    });
 });
 
