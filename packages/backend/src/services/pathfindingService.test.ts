@@ -50,5 +50,12 @@ describe('Pathfinding Service', () => {
             { x: 2, y: 8 }
         ]);
     });
+    it('should return an empty array when no path is found', () => {
+        const start: Coordinates = { x: 1, y: 0 };
+        const end: Coordinates = { x: 1, y: 1 };
+        const path = findPath(grid, start, end);
+    
+        expect(path).toEqual([]);
+    });
 });
 
