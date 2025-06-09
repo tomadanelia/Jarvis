@@ -14,6 +14,24 @@ const algorithm = new PF.AStarFinder();
  *                          Returns an empty array if no path is found.
  */
 const findPath = (grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] => {
+  if (!grid || !Array.isArray(grid) || grid.length === 0 || !grid[0] || grid[0].length === 0) {
+    throw new Error("Invalid grid provided for pathfinding.");
+    
+  }
+  if (
+    !start || !end ||
+    typeof start.x !== "number" || typeof start.y !== "number" ||
+    typeof end.x !== "number" || typeof end.y !== "number" ||
+    start.x < 0 || start.y < 0 || end.x < 0 || end.y < 0 ||
+    start.x >= grid[0].length || start.y >= grid.length ||
+    end.x >= grid[0].length || end.y >= grid.length
+  ) {
+    throw new Error("Invalid start or end coordinates provided for pathfinding.");
+  }
+  if (start.x === end.x && start.y === end.y) {
+    return [{ x: start.x, y: start.y }];
+  }
+
   const matrix = grid.map(row =>
     row.map(cell => (cell.type === "walkable" || cell.type === "chargingStation" ? 0 : 1))
   );
