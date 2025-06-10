@@ -86,7 +86,17 @@ This blueprint focuses on building the backend first, establishing core logic an
 **Phase 3: Backend - Simulation Engine & Core Loop**
 
 1.  **B3.1: Robot Controller Logic (within `SimulationStateService` or separate `RobotService`):**
-    *   Logic for robot state transitions (`idle`, `en_route_to_task`, etc.).
+   
+    *Implement a method on SimulationStateService that is more like finplan.md's description. Let's call it moveRobotOneStep(robotId: string) or advanceRobotAlongPath(robotId: string).
+This method should:
+Find the robot by ID using a helper (_getRobotById).
+Check if the robot has a currentPath and if it's not empty.
+Take the next coordinate from the currentPath.
+Update the robot's currentLocation to this next coordinate.
+Deduct battery based on movementCostPerCell.
+Remove the coordinate from the beginning of currentPath.
+Update the robot's state in the internal robots array.
+Return the updated robot object or success status.
     *   `moveRobot(robot: Robot)`: If `currentPath` exists, move one step, update `currentLocation`, consume battery.
     *   `startPerformingTask(robot: Robot, task: Task)`: Update statuses, deduct `batteryCostToPerform`.
     *   `workOnTask(robot: Robot, task: Task)`: If `performing_task`, decrement internal work counter for task on robot. If counter done, complete task.
