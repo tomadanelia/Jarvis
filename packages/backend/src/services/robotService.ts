@@ -1,6 +1,6 @@
+
 import {  simulationStateService } from './simulationStateService';
 import { DEFAULT_MOVEMENT_COST_PER_CELL } from 'src/config/constants';
-
 
 /**
  * Moves the specified robot one step along its current path.
@@ -12,7 +12,6 @@ import { DEFAULT_MOVEMENT_COST_PER_CELL } from 'src/config/constants';
  * @returns {boolean} True if the robot was moved successfully, false otherwise.
  */
 export function moveRobotOneStep(robotId: string): boolean {
-   simulationStateService.getRobotById(robotId);
     const robot = simulationStateService.getRobotById(robotId);
     if (!robot) {
       console.warn(`ROBOT_SERVICE: Robot with ID ${robotId} not found.`);
@@ -28,5 +27,3 @@ export function moveRobotOneStep(robotId: string): boolean {
     robot.currentPath.shift();
     return true;
   }
-
-
