@@ -161,7 +161,7 @@
         *   Add a method like `incrementTaskWorkProgress(taskId: string): Task | null` or ensure `updateTaskState` is used by engine.
         *   Add a method like `incrementRobotCharging(robotId: string): Robot | null` or ensure `updateRobotState` is used.
     *   [ ] Add unit tests for these new/modified StateService methods.
-*   **[ ] (Est: 2-3.5 hours) B3.4: Task Assignment Service (Code + Unit Tests)**
+*   **[ ] (Est: 2-3.5 hours) B3.4: Task Assignment Service (Code + Unit Tests)this is main logic of whole project based on selected strategy how we pair tasks and robots that is real algorithm of simulation**
     *   [ ] Create `packages/backend/src/services/taskAssignmentService.ts`.
     *   [ ] Constructor takes `SimulationStateService` and `PathfindingService`.
     *   [ ] Implement assignment logic methods (`assignTasksOnInit`, `findAndAssignTaskForIdleRobot`, etc.). These methods use `PathfindingService` and **call `SimulationStateService` methods (like `updateRobotState`) to apply assignments**.
