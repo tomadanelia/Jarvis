@@ -1,5 +1,5 @@
 import { Cell,CellType,Coordinates } from '@common/types';
-import findPath  from './pathfindingService';
+import {pathfindingService as p}  from './pathfindingService';
   const grid: Cell[][] = [
             [{ type: "walkable",coordinates :{x:0,y:0} },{ type: "wall",coordinates :{x:1,y:0} },{ type: "walkable",coordinates :{x:2,y:0} }], 
             [{ type: "walkable",coordinates :{x:0,y:1} },{ type: "wall",    coordinates :{x:1,y:1} },{ type: "walkable",coordinates :{x:2,y:1} }],
@@ -16,7 +16,7 @@ describe('Pathfinding Service', () => {
 
         const start1: Coordinates = { x: 0, y: 0 };
         const end1: Coordinates = { x: 2, y: 2 };
-        const path1 = findPath(grid, start1, end1);
+        const path1 = p.findPath(grid, start1, end1);
     
         expect(path1).toEqual([
             { x: 0, y: 0 },
@@ -35,7 +35,7 @@ describe('Pathfinding Service', () => {
         const end3: Coordinates = { x: 2, y: 8 };
         const start4: Coordinates = { x: 0, y: 0 }
         const end4: Coordinates = { x: 2, y: 6 };
-         const path2 = findPath(grid, start2, end2);
+         const path2 = p.findPath(grid, start2, end2);
           expect(path2).toEqual([
             { x: 0, y: 0 },
             { x: 0, y: 1 },
@@ -53,14 +53,14 @@ describe('Pathfinding Service', () => {
     it('should return an empty array when no path is found', () => {
         const start: Coordinates = { x: 1, y: 0 };
         const end: Coordinates = { x: 1, y: 1 };
-        const path = findPath(grid, start, end);
+        const path = p.findPath(grid, start, end);
     
         expect(path).toEqual([]);
     });
     it('should return same when start and end are same', () => {
         const start: Coordinates = { x: 0, y: 0 };
         const end: Coordinates = { x: 0, y: 0 };
-        const path = findPath(grid, start, end);
+        const path = p.findPath(grid, start, end);
     
         expect(path).toEqual([{ x: 0, y: 0 }]);
     });
@@ -69,7 +69,7 @@ describe('Pathfinding Service', () => {
         const start: Coordinates = { x: 0, y: 0 };
         const end: Coordinates = { x: 1, y: 1 };
     
-        expect(() => findPath(invalidGrid, start, end)).toThrow("Invalid grid provided for pathfinding.");
+        expect(() => p.findPath(invalidGrid, start, end)).toThrow("Invalid grid provided for pathfinding.");
     });
 });
 
