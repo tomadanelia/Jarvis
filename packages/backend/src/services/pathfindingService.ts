@@ -1,7 +1,8 @@
 import { Cell, Coordinates } from "@common/types";
 import PF from 'pathfinding';
 
-const algorithm = new PF.AStarFinder();
+class PathfindingService {
+  private algorithm = new PF.AStarFinder();
 /**
  * Finds a path from the start coordinates to the end coordinates on the given grid using the A* algorithm.
  *
@@ -13,7 +14,7 @@ const algorithm = new PF.AStarFinder();
  * @returns {Coordinates[]} An array of coordinates representing the path from start to end (inclusive).
  *                          Returns an empty array if no path is found.
  */
-const findPath = (grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] => {
+public findPath = (grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] => {
   if (!grid || !Array.isArray(grid) || grid.length === 0 || !grid[0] || grid[0].length === 0) {
     throw new Error("Invalid grid provided for pathfinding.");
     
@@ -36,7 +37,7 @@ const findPath = (grid: Cell[][], start: Coordinates, end: Coordinates): Coordin
     row.map(cell => (cell.type === "walkable" || cell.type === "chargingStation" ? 0 : 1))
   );
   const gridObj = new PF.Grid(matrix);
-  const path = algorithm.findPath(start.x, start.y, end.x, end.y, gridObj);
+  const path = this.algorithm.findPath(start.x, start.y, end.x, end.y, gridObj);
 
   if (!path || path.length === 0) {
     return [];
@@ -44,4 +45,7 @@ const findPath = (grid: Cell[][], start: Coordinates, end: Coordinates): Coordin
 
   return path.map(([x, y]) => ({ x, y }));
 };
-export default findPath;
+
+}
+const pathfindingService = new PathfindingService();
+export { pathfindingService }
