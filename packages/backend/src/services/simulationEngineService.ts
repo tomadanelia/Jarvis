@@ -53,7 +53,6 @@ class SimulationEngineService {
         if (!moveRobotOneStep(robot.id)) {
           return; // Skip further processing for this robot if it can't move
         }
-        return;
         
       
       }
@@ -70,8 +69,11 @@ class SimulationEngineService {
       if (robot.status === 'performingTask') {
         const task = this.simulationStateService.getTasks().find(t => t.id === robot.assignedTaskId);
         if (task) {
-          task.workDuration -= 1; // Decrease work duration
-          if (task.workDuration <= 0) {
+          if (robot.workProgress === undefined){
+          robot.workProgress = 0;
+        }   // Initialize work progress if undefined
+          robot.workProgress+=1; // increase work progress
+          if (task.workDuration <= robot.workProgress) {
             this.simulationStateService.updateTaskState(task.id,{status: 'completed'});
             this.simulationStateService.updateRobotState(robot.id, { status: 'idle', assignedTaskId: undefined });
             this.taskAssignementService.assignTasksOnInit();
