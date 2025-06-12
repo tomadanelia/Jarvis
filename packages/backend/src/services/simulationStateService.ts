@@ -79,6 +79,9 @@ export class SimulationStateService {
             });
         });
         }
+        public getChargingStations(): Coordinates[] {
+            return [...this.chargingStations]; 
+        }   
 /**
  * Adds a new robot to the simulation at the specified location.
  * Robots can be placed on 'walkable' or 'charging_station' cells.
