@@ -28,10 +28,10 @@ export class SimulationStateService {
     private currentGrid: Cell[][] | null = null;
     private currentGridId: string | null = null;
     private currentGridName: string | null = null;
-
+    
     private robots: Robot[] = [];
     private tasks: Task[] = [];
-
+    private chargingStations: Coordinates[] = []; 
     private selectedStrategy: SimulationStrategy | null = null;
     private simulationStatus: SimulationRunStatus = 'idle';
     private simulationTime: number = 0; 
@@ -43,6 +43,7 @@ export class SimulationStateService {
  * @param gridLayout - The 2D array of Cell objects representing the grid structure.
  */
     public initializeSimulation(gridId: string, gridName: string, gridLayout: Cell[][]): void {
+        this.findChargingStationCells();
         console.log(`Initializing simulation with grid: ${gridName} (ID: ${gridId})`);
         this.currentGrid = gridLayout;
         this.currentGridId = gridId;
@@ -65,6 +66,19 @@ export class SimulationStateService {
     public getCurrentGridName(): string | null {
         return this.currentGridName;
     }
+    private findChargingStationCells():void{
+        if (!this.currentGrid) {
+            console.warn("SIM_STATE_SERVICE: No grid loaded to find charging stations.");
+            return;
+        }
+        this.currentGrid.forEach((row, y) => {
+            row.forEach((cell, x) => {
+                if (cell.type === 'chargingStation') {
+                    this.chargingStations.push({ x, y });
+                }
+            });
+        });
+        }
 /**
  * Adds a new robot to the simulation at the specified location.
  * Robots can be placed on 'walkable' or 'charging_station' cells.
