@@ -1,7 +1,7 @@
 import { Cell, Coordinates } from "@common/types";
 import PF from 'pathfinding';
 
-class PathfindingService {
+export class PathfindingService {
   private algorithm = new PF.AStarFinder();
 /**
  * Finds a path from the start coordinates to the end coordinates on the given grid using the A* algorithm.
