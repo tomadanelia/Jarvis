@@ -1,7 +1,8 @@
 import { simulationStateService, SimulationStateService } from "./simulationStateService";
 import { PathfindingService, pathfindingService } from "./pathfindingService";
-import { BASE_SIMULATION_STEP_INTERVAL_MS, DEFAULT_SIMULATION_SPEED_FACTOR } from "src/config/constants";
+import { BASE_SIMULATION_STEP_INTERVAL_MS, DEFAULT_SIMULATION_SPEED_FACTOR, LOW_BATTERY_THRESHOLD } from "src/config/constants";
 import { moveRobotOneStep } from "./robotService";
+import { Coordinates } from "@common/types";
 /*Based on the TODO and the service roles, startSimulation() should:
 Check if a grid is currently loaded in SimulationStateService. (You can't start a simulation without an environment).
 Set the simulationStatus in SimulationStateService to 'running'.
@@ -71,12 +72,13 @@ class SimulationEngineService {
         if (task) {
           if (robot.workProgress === undefined){
           robot.workProgress = 0;
-        }   // Initialize work progress if undefined
-          robot.workProgress+=1; // increase work progress
+        }   
+          robot.workProgress+=1; 
           if (task.workDuration <= robot.workProgress) {
             this.simulationStateService.updateTaskState(task.id,{status: 'completed'});
             this.simulationStateService.updateRobotState(robot.id, { status: 'idle', assignedTaskId: undefined });
-            this.taskAssignementService.assignTasksOnInit();
+            this.taskAssignementService.findAndAssignTaskForIdleRobot(robot.id); // Reassign task if available
+            robot.workProgress=0;
             console.log(`SIM_ENGINE: Robot ${robot.id} completed task ${task.id}.`);
           }
         } else {
@@ -91,7 +93,38 @@ class SimulationEngineService {
         }
       
     }
+    else if (robot.status === 'idle') {
+            // 3. IDLE ROBOT DECISION MAKING (Critical Missing Logic)
+            // TODO:
+          if (robot.battery < LOW_BATTERY_THRESHOLD) {
+
+const grid = this.simulationStateService.getCurrentGrid();
+const stations = this.simulationStateService.getChargingStations();
+const arr= new Map<number,Coordinates[]>();
+if (grid) {
+  for (const c of stations) {
+    let path= this.pathfindingService.findPath(grid, robot.currentLocation, c);
+    let length = path.length;
+    if (length > 0) {
+        arr.set(length, path);
+    }
+}
+let min = Math.min(...arr.keys());
+const shortestPath = arr.get(min);
+if (shortestPath) {
+              this.simulationStateService.updateRobotState(robot.id, {
+                status: 'onChargingWay',
+                currentTarget: shortestPath[shortestPath.length - 1],
+                currentPath: shortestPath
+              });
+              console.log(`SIM_ENGINE: Robot ${robot.id} is heading to charging station at (${shortestPath[shortestPath.length - 1].x}, ${shortestPath[shortestPath.length - 1].y}).`);
+            } 
+            } else {
+              this.taskAssignementService.findAndAssignTaskForIdleRobot(robot.id); // Assign new task if available
+             }
+        }
   }
+    }
     );
   
   const allTasksCompleted = this.simulationStateService.getTasks().every(task => task.status === 'completed');
