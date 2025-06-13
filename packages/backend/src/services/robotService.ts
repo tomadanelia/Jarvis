@@ -1,6 +1,6 @@
 
 import {  simulationStateService } from './simulationStateService';
-import { DEFAULT_MOVEMENT_COST_PER_CELL } from 'src/config/constants';
+import { DEFAULT_MOVEMENT_COST_PER_CELL } from '../config/constants';
 
 /**
  * Moves the specified robot one step along its current path.
