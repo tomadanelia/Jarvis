@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import { placeRobot, placeTask, simulationSetUp, selectStrategy, getSetupState, resetSetup } from '../controllers/simulationController';
+import { placeRobot, placeTask, simulationSetUp, selectStrategy, getSetupState, resetSetup ,start} from '../controllers/simulationController';
 const router= Router();
 router.post("/setUp/:id", simulationSetUp);
 router.post("/placeRobot",placeRobot);
@@ -7,4 +7,9 @@ router.post("/placeTask",placeTask);
 router.post("/selectStrategy",selectStrategy);
 router.post("/resetSetup",resetSetup);
 router.get("/getSetupState",getSetupState);
+router.post("/control/start",start);
+router.post("/control/pause");
+router.post("/control/resume");
+router.post("/control/reset");
+router.post("/control/speed/:id");
 export default router;
