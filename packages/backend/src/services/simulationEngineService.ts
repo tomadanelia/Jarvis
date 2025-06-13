@@ -1,34 +1,35 @@
 import { simulationStateService, SimulationStateService } from "./simulationStateService";
 import { PathfindingService, pathfindingService } from "./pathfindingService";
-import { BASE_SIMULATION_STEP_INTERVAL_MS, DEFAULT_SIMULATION_SPEED_FACTOR, LOW_BATTERY_THRESHOLD } from "src/config/constants";
+import { BASE_SIMULATION_STEP_INTERVAL_MS, DEFAULT_SIMULATION_SPEED_FACTOR, LOW_BATTERY_THRESHOLD } from "../config/constants";
 import { moveRobotOneStep } from "./robotService";
-import { Coordinates } from "@common/types";
+import { Coordinates, Task } from "@common/types";
+import { taskAssignmentService, TaskAssignmentService } from "./taskAssignmentService";
 /*Based on the TODO and the service roles, startSimulation() should:
 Check if a grid is currently loaded in SimulationStateService. (You can't start a simulation without an environment).
 Set the simulationStatus in SimulationStateService to 'running'.
 Reset the simulationTime in SimulationStateService to 0. (The TODO implies resetSimulationSetup does this, but it's good to be explicit here too, or ensure resetSimulationSetup is called before start if that's the desired flow - the current plan implies resetSetup is a separate button/action). Let's assume startSimulation resets time.
 Call the initial task assignment logic (e.g., taskAssignmentService.assignTasksOnInit()). This assigns the first batch of tasks based on the strategy.
 Start the setInterval that will repeatedly call the engine's step() method.*/
-class SimulationEngineService {
+export class SimulationEngineService {
   private pathfindingService: PathfindingService;
   private simulationStateService: SimulationStateService;
-  private taskAssignementService: any;  
+  private taskAssignmentService: TaskAssignmentService;
   private intervalId: NodeJS.Timeout | null = null; // Store the interval ID
   private speedFactor: number = DEFAULT_SIMULATION_SPEED_FACTOR; // To control speed
   /**
    * Creates a new SimulationEngineService.
    * @param simulationStateService The simulation state service instance.
    * @param pathfindingService The pathfinding service instance.
-   * @param taskAssignementService (Optional) The task assignment service instance.
+   * @param taskAssignmentService (Optional) The task assignment service instance.
    */
   public constructor(
     simulationStateService: SimulationStateService,
     pathfindingService: PathfindingService,
-    taskAssignementService?: any
+   taskAssignmentService: TaskAssignmentService,
   ) {
     this.simulationStateService = simulationStateService;
     this.pathfindingService = pathfindingService;
-    this.taskAssignementService = taskAssignementService;
+    this.taskAssignmentService = taskAssignmentService;
   }
 
   /**
@@ -45,93 +46,113 @@ class SimulationEngineService {
    */
   private step(): void {
     if (this.simulationStateService.getSimulationStatus() !== 'running') {
-      console.warn('SIM_ENGINE: Cannot step, simulation is not running.');
-      return;
+        return;
     }
-    this.simulationStateService.incrementSimulationTime(); // Increment simulation time
-    this.simulationStateService.getRobots().forEach(robot => {
-      if (robot.currentPath&& robot.currentPath.length > 0) {
-        if (!moveRobotOneStep(robot.id)) {
-          return; // Skip further processing for this robot if it can't move
-        }
-        
-      
-      }
-        const target=robot.currentTarget;
-        if (!target) {
-          console.warn(`SIM_ENGINE: Robot ${robot.id} has no current target.`);
-          return;
-        }
-      if (robot.status==="idle"&&target.x=== robot.currentLocation.x && target.y === robot.currentLocation.y) {
-        this.simulationStateService.updateRobotState(robot.id, { status: 'performingTask' });
-        console.log(`SIM_ENGINE: Robot ${robot.id} is performing task at (${target.x}, ${target.y}).`);
-      return;
-      }
-      if (robot.status === 'performingTask') {
-        const task = this.simulationStateService.getTasks().find(t => t.id === robot.assignedTaskId);
-        if (task) {
-          if (robot.workProgress === undefined){
-          robot.workProgress = 0;
-        }   
-          robot.workProgress+=1; 
-          if (task.workDuration <= robot.workProgress) {
-            this.simulationStateService.updateTaskState(task.id,{status: 'completed'});
-            this.simulationStateService.updateRobotState(robot.id, { status: 'idle', assignedTaskId: undefined });
-            this.taskAssignementService.findAndAssignTaskForIdleRobot(robot.id); // Reassign task if available
-            robot.workProgress=0;
-            console.log(`SIM_ENGINE: Robot ${robot.id} completed task ${task.id}.`);
-          }
-        } else {
-          console.warn(`SIM_ENGINE: Task for robot ${robot.id} not found.`);
-        }
-      } else if (robot.status === 'charging') {
-        robot.battery += 25; // Recharge battery
-        if (robot.battery >= robot.maxBattery) {
-          robot.battery = robot.maxBattery;
-          this.simulationStateService.updateRobotState(robot.id, { status: 'idle' });
-          console.log(`SIM_ENGINE: Robot ${robot.id} finished charging.`);
-        }
-      
-    }
-    else if (robot.status === 'idle') {
-            // 3. IDLE ROBOT DECISION MAKING (Critical Missing Logic)
-            // TODO:
-          if (robot.battery < LOW_BATTERY_THRESHOLD) {
 
-const grid = this.simulationStateService.getCurrentGrid();
-const stations = this.simulationStateService.getChargingStations();
-const arr= new Map<number,Coordinates[]>();
-if (grid) {
-  for (const c of stations) {
-    let path= this.pathfindingService.findPath(grid, robot.currentLocation, c);
-    let length = path.length;
-    if (length > 0) {
-        arr.set(length, path);
-    }
-}
-let min = Math.min(...arr.keys());
-const shortestPath = arr.get(min);
-if (shortestPath) {
-              this.simulationStateService.updateRobotState(robot.id, {
-                status: 'onChargingWay',
-                currentTarget: shortestPath[shortestPath.length - 1],
-                currentPath: shortestPath
-              });
-              console.log(`SIM_ENGINE: Robot ${robot.id} is heading to charging station at (${shortestPath[shortestPath.length - 1].x}, ${shortestPath[shortestPath.length - 1].y}).`);
-            } 
-            } else {
-              this.taskAssignementService.findAndAssignTaskForIdleRobot(robot.id); // Assign new task if available
-             }
+    this.simulationStateService.incrementSimulationTime();
+    console.log(`SIM_ENGINE: --- Step ${this.simulationStateService.getSimulationTime()} ---`);
+
+    for (const robot of this.simulationStateService.getRobots()) {
+        let currentRobotState = this.simulationStateService.getRobotById(robot.id);
+        if (!currentRobotState) continue; 
+        if (currentRobotState.currentPath && currentRobotState.currentPath.length > 0) {
+            moveRobotOneStep(currentRobotState.id);
+            currentRobotState = this.simulationStateService.getRobotById(robot.id)!;
         }
-  }
+
+        const isAtTarget = currentRobotState.currentTarget &&
+            currentRobotState.currentTarget.x === currentRobotState.currentLocation.x &&
+            currentRobotState.currentTarget.y === currentRobotState.currentLocation.y;
+
+        switch (currentRobotState.status) {
+            case 'onTaskWay':
+                if (isAtTarget) {
+                    console.log(`SIM_ENGINE: Robot ${currentRobotState.id} arrived at task.`);
+                    const task = this.simulationStateService.getTaskById(currentRobotState.assignedTaskId!);
+                    const newBattery = currentRobotState.battery - (task?.batteryCostToPerform || 0);
+                    this.simulationStateService.updateRobotState(currentRobotState.id, {
+                        status: 'performingTask',
+                        battery: newBattery,
+                        workProgress: 0, 
+                        currentTarget: undefined, 
+                        currentPath: undefined,
+                    });
+                }
+                break;
+
+            case 'performingTask':
+                const task = this.simulationStateService.getTaskById(currentRobotState.assignedTaskId!);
+                if (task) {
+                    const newProgress = (currentRobotState.workProgress || 0) + 1;
+                    this.simulationStateService.updateRobotState(currentRobotState.id, { workProgress: newProgress });
+
+                    if (newProgress >= task.workDuration) {
+                        console.log(`SIM_ENGINE: Robot ${currentRobotState.id} completed task ${task.id}.`);
+                        this.simulationStateService.updateTaskState(task.id, { status: 'completed' });
+                        this.simulationStateService.updateRobotState(currentRobotState.id, {
+                            status: 'idle',
+                            assignedTaskId: undefined,
+                            workProgress: undefined,
+                        });
+                    }
+                }
+                break;
+
+            case 'onChargingWay':
+                if (isAtTarget) {
+                    console.log(`SIM_ENGINE: Robot ${currentRobotState.id} arrived at charger.`);
+                    this.simulationStateService.updateRobotState(currentRobotState.id, {
+                        status: 'charging',
+                        currentTarget: undefined,
+                        currentPath: undefined,
+                    });
+                }
+                break;
+
+            case 'charging':
+                const newBattery = currentRobotState.battery + 25;
+                if (newBattery >= currentRobotState.maxBattery) {
+                    this.simulationStateService.updateRobotState(currentRobotState.id, {
+                        battery: currentRobotState.maxBattery,
+                        status: 'idle'
+                    });
+                    console.log(`SIM_ENGINE: Robot ${currentRobotState.id} finished charging.`);
+                } else {
+                    this.simulationStateService.updateRobotState(currentRobotState.id, { battery: newBattery });
+                }
+                break;
+
+            case 'idle':
+                if (currentRobotState.battery < LOW_BATTERY_THRESHOLD) {
+                    const grid = this.simulationStateService.getCurrentGrid()!;
+                    const stations = this.simulationStateService.getChargingStations();
+                    let shortestPath: Coordinates[] | null = null;
+
+                    for (const station of stations) {
+                        const path = this.pathfindingService.findPath(grid, currentRobotState.currentLocation, station);
+                        if (path && path.length > 0 && (!shortestPath || path.length < shortestPath.length)) {
+                            shortestPath = path;
+                        }
+                    }
+
+                    if (shortestPath) {
+                        this.simulationStateService.updateRobotState(currentRobotState.id, {
+                            status: 'onChargingWay',
+                            currentTarget: shortestPath[shortestPath.length - 1],
+                            currentPath: shortestPath
+                        });
+                    }
+                } else {
+                    this.taskAssignmentService.findAndAssignTaskForIdleRobot(currentRobotState.id);
+                }
+                break;
+        }
+    } 
+
+    const tasks = this.simulationStateService.getTasks();
+    if (tasks.length > 0 && tasks.every(task => task.status === 'completed')) {
+        this.endSimulation();
     }
-    );
-  
-  const allTasksCompleted = this.simulationStateService.getTasks().every(task => task.status === 'completed');
-         if (allTasksCompleted && this.simulationStateService.getSimulationStatus() === 'running') {
-             console.log('SIM_ENGINE: All tasks completed. Ending simulation.');
-             this.endSimulation(); // Call a method to handle cleanup/metrics
-         }
 }
 
   /**
@@ -151,8 +172,8 @@ if (shortestPath) {
 
     this.simulationStateService.setSimulationStatus('running');
 
-    if (this.taskAssignementService) {
-      await this.taskAssignementService.assignTasksOnInit();
+    if (this.taskAssignmentService) {
+      await this.taskAssignmentService.assignTasksOnInit();
     }
     const intervalDelay = BASE_SIMULATION_STEP_INTERVAL_MS / this.speedFactor;
         if (intervalDelay <= 0 || !Number.isFinite(intervalDelay)) {
@@ -193,6 +214,7 @@ if (shortestPath) {
              console.log(`SIM_ENGINE: Simulation interval resumed (${intervalDelay}ms per step).`);
          } else {
              console.log('SIM_ENGINE: Cannot resume. Simulation is not paused or interval already active.');
+             throw new Error("could not resume simulation already running")
          }
     }
 
@@ -238,5 +260,5 @@ if (shortestPath) {
     }
 
 }
-const simulationEngineService = new SimulationEngineService(simulationStateService, pathfindingService);
+const simulationEngineService = new SimulationEngineService(simulationStateService, pathfindingService,taskAssignmentService);
 export { simulationEngineService };
