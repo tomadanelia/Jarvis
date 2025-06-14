@@ -3,10 +3,17 @@ import { fetchGrids, setupSimulationApi } from '../services/apiService';
 import { useSimulationStore } from '../store/simulationStore';
 
 /**
- * Dropdown component for selecting a grid layout from backend.
- * Fetches grids on mount and updates the simulation store accordingly.
+ * GridSelector component.
+ * 
+ * Renders a dropdown menu for selecting a grid layout.
+ * On mount, it fetches the list of available grids from the backend
+ * and stores them in the Zustand store. On selection, it sets up the
+ * simulation and updates the selected grid's layout.
+ * 
+ * @component
  */
 export default function GridSelector() {
+  /** Whether grid data is still loading */
   const [loading, setLoading] = useState(true);
 
   const {
@@ -15,6 +22,10 @@ export default function GridSelector() {
     setSelectedGrid,
   } = useSimulationStore();
 
+  /**
+   * Fetches list of available grids from backend on component mount.
+   * Updates Zustand store with retrieved grid list.
+   */
   useEffect(() => {
     const loadGrids = async () => {
       try {
@@ -29,13 +40,25 @@ export default function GridSelector() {
     loadGrids();
   }, [setAvailableGrids]);
 
+  /**
+   * Handles the grid selection from the dropdown.
+   * - Sets up the simulation on the backend using the selected grid ID.
+   * - Fetches the full grid layout after setup.
+   * - Updates Zustand store with the selected grid ID and layout.
+   *
+   * @param event - React change event from the grid dropdown selection
+   */
   const handleSelect = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedGridId = event.target.value;
+    if (!selectedGridId) return;
+
     try {
       await setupSimulationApi(selectedGridId);
-      const res = await fetch(`/api/grids/${selectedGridId}`); // fallback in case you want layout too
+
+      const res = await fetch(`/api/grids/${selectedGridId}`);
       const data = await res.json();
-      setSelectedGrid(selectedGridId, data.layout); // assumes layout is in `data.layout`
+
+      setSelectedGrid(selectedGridId, data.layout);
     } catch (err) {
       console.error('Failed to setup simulation:', err);
     }
