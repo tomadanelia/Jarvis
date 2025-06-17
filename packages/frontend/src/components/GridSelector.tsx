@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchGrids, setupSimulationApi } from '../services/apiService';
+import { fetchGridById, fetchGrids, setupSimulationApi } from '../services/apiService';
 import { useSimulationStore } from '../store/simulationStore';
 
 /**
@@ -49,20 +49,28 @@ export default function GridSelector() {
    * @param event - React change event from the grid dropdown selection
    */
   const handleSelect = async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedGridId = event.target.value;
-    if (!selectedGridId) return;
+  const selectedGridId = event.target.value;
+  if (!selectedGridId) return;
 
-    try {
-      await setupSimulationApi(selectedGridId);
+  try {
+    await setupSimulationApi(selectedGridId);
 
-      const res = await fetch(`/api/grids/${selectedGridId}`);
-      const data = await res.json();
+    console.log('[GridSelector] Fetching grid details for ID:', selectedGridId);
+    // const res = await fetch(`/api/grids/${selectedGridId}`); // OLD - Missing BASE_URL
+    // const data = await res.json(); // OLD
 
-      setSelectedGrid(selectedGridId, data.layout);
-    } catch (err) {
-      console.error('Failed to setup simulation:', err);
+    const gridData = await fetchGridById(selectedGridId); // NEW - Use apiService function
+
+    setSelectedGrid(selectedGridId, gridData.layout); // Assuming fetchGridById returns { id, name, layout }
+  } catch (err) {
+    console.error('Failed to setup simulation:', err);
+    // Add more specific error logging if needed
+    if (err instanceof Error) {
+        console.error('Error name:', err.name);
+        console.error('Error message:', err.message);
     }
-  };
+  }
+};
 
   return (
     <div>
