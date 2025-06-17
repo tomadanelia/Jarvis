@@ -7,6 +7,7 @@ export interface Cell{
     type:CellType;
     coordinates:Coordinates;
 }
+export type SimulationStatus = 'idle' | 'running' | 'paused';
 
  
 export type TaskStatus = `unassigned`|`assigned`|`inProgress`|`completed`;
