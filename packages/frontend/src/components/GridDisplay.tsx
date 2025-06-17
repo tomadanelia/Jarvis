@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
-import { placeRobotApi, placeTaskApi } from '../services/apiService';
+import { getSimulationStateApi, placeRobotApi, placeTaskApi } from '../services/apiService';
 
 /**
  * Props for GridDisplay component.
@@ -32,11 +32,28 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
   /**
    * Fetches updated simulation state from backend and updates store.
    */
-  const refreshSimulationState = async () => {
-    const updatedState = await fetch('/api/simulation/state').then((r) => r.json());
-    setRobots(updatedState.robots);
-    setTasks(updatedState.tasks);
+const refreshSimulationState = async () => {
+    try {
+      console.log('[GridDisplay] Refreshing simulation state...');
+      const updatedState = await getSimulationStateApi(); // Use the service function
+      console.log('[GridDisplay] Fetched updated state:', updatedState);
+      setRobots(updatedState.robots);
+      setTasks(updatedState.tasks);
+      // You might want to update other parts of the store based on updatedState:
+      // if (updatedState.currentGrid && updatedState.gridId) {
+      //   setSelectedGrid(updatedState.gridId, updatedState.currentGrid);
+      // }
+      // if (updatedState.selectedStrategy) {
+      //   setStrategy(updatedState.selectedStrategy);
+      // }
+      // setSimulationStatus(updatedState.simulationStatus);
+      console.log('[GridDisplay] Simulation state refreshed and store updated.');
+    } catch (error) {
+      console.error('[GridDisplay] Failed to refresh simulation state:', error);
+      // Handle this error appropriately, maybe update an error message in the store
+    }
   };
+
 
   /**
    * Handles clicking on a grid cell based on the current placement mode.
@@ -50,25 +67,11 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
       const coordinates = { x, y };
 
       if (currentPlacementMode === 'robot') {
-        await placeRobotApi({
-          id: crypto.randomUUID(),
-          iconType: '🤖',
-          battery: 100,
-          maxBattery: 100,
-          status: 'idle',
-          movementCostPerCell: 1,
-          consecutiveWaitSteps: 0,
-          currentLocation: coordinates,
-          initialLocation: coordinates,
-        });
+        await placeRobotApi({ currentLocation: coordinates, iconType: '🤖' } as Robot); // Cast for type, apiService extracts
+
       } else if (currentPlacementMode === 'task') {
-        await placeTaskApi({
-          id: crypto.randomUUID(),
-          location: coordinates,
-          status: 'unassigned',
-          workDuration: 5,
-          batteryCostToPerform: 10,
-        });
+        await placeTaskApi({ location: coordinates } as Task); // Cast for type, apiService extracts
+
       }
 
       await refreshSimulationState();
