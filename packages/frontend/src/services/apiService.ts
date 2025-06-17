@@ -1,4 +1,4 @@
-import type { Task, Robot } from '../../../common/src/types';
+import type { Task, Robot, Cell, SimulationStatus } from '../../../common/src/types';
 
 /**
  * Base URL for backend API calls.
@@ -25,12 +25,17 @@ export async function fetchGrids(): Promise<any[]> {
  * @returns {Promise<any>} A promise resolving to the grid data.
  * @throws Will throw an error if the request fails.
  */
-export async function fetchGridById(id: string): Promise<any> {
-  const res = await fetch(`${BASE_URL}/api/grids/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch grid');
+// packages/frontend/src/services/apiService.ts
+export async function fetchGridById(id: string): Promise<any> { // Consider defining a proper return type
+  const res = await fetch(`${BASE_URL}/api/grids/${id}`); // Ensure BASE_URL is here
+  if (!res.ok) {
+    // Try to get more info from the response if it's not JSON
+    const errorText = await res.text();
+    console.error(`fetchGridById FAILED for ID ${id}. Status: ${res.status}. Response text: ${errorText}`);
+    throw new Error(`Failed to fetch grid ${id}. Status: ${res.status}. Body: ${errorText}`);
+  }
   return res.json();
 }
-
 /**
  * Setup the simulation with a given grid ID.
  *
@@ -39,14 +44,17 @@ export async function fetchGridById(id: string): Promise<any> {
  * @throws Will throw an error if the setup fails.
  */
 export async function setupSimulationApi(gridId: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/setup`, {
+  const res = await fetch(`${BASE_URL}/api/simulation/setUp/${gridId}`, { // Critical: /setUp/:id
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gridId }),
+    // No body needed if gridId is in the URL param
   });
-  if (!res.ok) throw new Error('Simulation setup failed');
+  if (!res.ok) {
+    console.error('setupSimulationApi FAILED. Status:', res.status); // ADD THIS LOG
+    throw new Error(`Simulation setup failed with status: ${res.status}`); // More informative error
+  }
+  console.log('setupSimulationApi SUCCEEDED'); // ADD THIS LOG
 }
-
 /**
  * Place a robot in the simulation.
  *
@@ -55,28 +63,52 @@ export async function setupSimulationApi(gridId: string): Promise<void> {
  * @throws Will throw an error if the placement fails.
  */
 export async function placeRobotApi(robot: Robot): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/place-robot`, {
+  // The body for placeRobot on the backend expects { location, iconType }
+  // Your frontend is sending the whole Robot object from common/types.
+  // The backend controller for placeRobot is:
+  //   const {location,iconType}=req.body;
+  // This will work if `robot` object sent from frontend has `location` and `iconType` as top-level properties.
+  // Your `Robot` type does have `currentLocation` (which should map to `location`) and `iconType`.
+  // We might need to adjust the body sent or how the backend extracts it.
+  // For now, let's fix the URL.
+  // The backend controller expects: { location: Coordinates, iconType: string }
+  // The common Robot type has: iconType: string, currentLocation: Coordinates
+  // We should send what the backend expects.
+
+  const payload = {
+    location: robot.currentLocation, // Or robot.initialLocation depending on desired behavior
+    iconType: robot.iconType,
+  };
+
+  const res = await fetch(`${BASE_URL}/api/simulation/placeRobot`, { // Corrected URL (no dash)
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(robot),
+    body: JSON.stringify(payload), // Send only what the backend expects
   });
-  if (!res.ok) throw new Error('Placing robot failed');
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`placeRobotApi FAILED. Status: ${res.status}. Response text: ${errorText}`);
+    throw new Error(`Placing robot failed. Status: ${res.status}. Body: ${errorText}`);
+  }
 }
 
-/**
- * Place a task in the simulation.
- *
- * @param {Task} task - The task object to place in the simulation.
- * @returns {Promise<void>}
- * @throws Will throw an error if the placement fails.
- */
 export async function placeTaskApi(task: Task): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/place-task`, {
+  // Backend controller for placeTask is:
+  //   const location=req.body;
+  // It expects the location object directly as the body, not nested.
+  // Your common Task type has: location: Coordinates
+  // So sending task.location should be correct.
+
+  const res = await fetch(`${BASE_URL}/api/simulation/placeTask`, { // Corrected URL (no dash)
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(task),
+    body: JSON.stringify(task.location), // Send only the location object
   });
-  if (!res.ok) throw new Error('Placing task failed');
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`placeTaskApi FAILED. Status: ${res.status}. Response text: ${errorText}`);
+    throw new Error(`Placing task failed. Status: ${res.status}. Body: ${errorText}`);
+  }
 }
 
 /**
@@ -102,7 +134,7 @@ export async function selectStrategyApi(strategy: string): Promise<void> {
  * @throws Will throw an error if the reset fails.
  */
 export async function resetSetupApi(): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/reset`, {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/reset`, {
     method: 'POST',
   });
   if (!res.ok) throw new Error('Resetting setup failed');
@@ -115,10 +147,20 @@ export async function resetSetupApi(): Promise<void> {
  * @throws Will throw an error if the fetch fails.
  */
 export async function getSimulationStateApi(): Promise<{
+  currentGrid: Cell[][] | null; // Match what backend getSetupState returns
+  gridId: string | null;
+  gridName: string | null;
   robots: Robot[];
   tasks: Task[];
+  selectedStrategy: string | null; // Or your SimulationStrategy type
+  simulationStatus: SimulationStatus; // Your SimulationStatus type
+  simulationTime: number;
 }> {
-  const res = await fetch(`${BASE_URL}/api/simulation/state`);
-  if (!res.ok) throw new Error('Failed to fetch simulation state');
+  const res = await fetch(`${BASE_URL}/api/simulation/getSetupState`); // Correct endpoint
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`getSimulationStateApi FAILED. Status: ${res.status}. Response text: ${errorText}`);
+    throw new Error(`Failed to fetch simulation state. Status: ${res.status}. Body: ${errorText}`);
+  }
   return res.json();
 }
