@@ -9,7 +9,7 @@ import { Request, Response } from "express";
 import { GridDefinitionFromDB } from "../services/supabaseService";
 import { SupabaseService } from "../services/supabaseService";
 import { SimulationStateService, simulationStateService } from "../services/simulationStateService";
-import { simulationEngineService } from "src/services/simulationEngineService";
+import { simulationEngineService } from "../services/simulationEngineService";
 const supabaseService = new SupabaseService();
 
 /**
