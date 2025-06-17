@@ -40,17 +40,26 @@ export const getGridDetails = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+  const gridId = req.params.id; // Get ID early for logging
+  console.log(`[gridController] Attempting to get details for grid ID: ${gridId}`);
   try {
-    const grid = await supabaseService.getGridById(req.params.id);
+    const grid = await supabaseService.getGridById(gridId);
+    console.log(`[gridController] Fetched grid from SupabaseService:`, grid ? `Name: ${grid.name}` : 'Grid not found in service');
 
     if (!grid) {
+      console.log(`[gridController] Grid ID ${gridId} not found. Sending 404.`);
       res.status(404).json({ message: 'Grid not found' });
       return;
     }
 
-    res.json(grid);
-  } catch (error) {
-    console.error(`getGridDetails error for id=${req.params.id}:`, error);
-    res.status(500).json({ message: 'Failed to fetch grid details' });
+    console.log(`[gridController] Grid ID ${gridId} found. Attempting to send JSON response.`);
+    res.json(grid); // This sends the JSON
+    console.log(`[gridController] Successfully sent JSON response for grid ID: ${gridId}`);
+
+  } catch (error: any) { // Catch any type of error
+    console.error(`[gridController] CRITICAL ERROR in getGridDetails for id=${gridId}:`, error.message, error.stack);
+    if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to fetch grid details due to server error.' });
+    }
   }
 };
