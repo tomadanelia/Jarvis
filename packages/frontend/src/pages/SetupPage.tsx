@@ -4,6 +4,8 @@
 import GridSelector from '../components/GridSelector';
 import GridDisplay from '../components/GridDisplay';
 import { useSimulationStore } from '../store/simulationStore';
+import StrategySelector from '../components/StrategySelector';
+
 
 /**
  * SetupPage component.
@@ -56,6 +58,9 @@ export default function SetupPage() {
           Clear Placement Mode
         </button>
       </div>
+
+      {/* Strategy Selector */}
+      <StrategySelector />
 
       {/* Grid Display */}
       <div style={{ marginTop: '2rem' }}>
