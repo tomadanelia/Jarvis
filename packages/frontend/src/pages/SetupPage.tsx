@@ -28,10 +28,10 @@ export default function SetupPage() {
   } = useSimulationStore();
 
   return (
-    <div style={{ padding: '1rem' }}>
+    <div className="setup-container">
+      {/* ---- the rest of the JSX remains unchanged ---- */}
       <h1>Robot Task Simulation Setup</h1>
 
-      {/* Grid Selector */}
       <GridSelector />
 
       {/* Placement Controls */}

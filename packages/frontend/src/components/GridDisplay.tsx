@@ -98,8 +98,8 @@ const refreshSimulationState = async () => {
                 key={x}
                 onClick={() => handleCellClick(x, y)}
                 style={{
-                  width: 30,
-                  height: 30,
+                  width: 17,
+                  height: 17,
                   backgroundColor: bgColor,
                   border: '1px solid #999',
                   display: 'flex',

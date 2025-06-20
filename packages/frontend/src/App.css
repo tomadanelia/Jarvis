@@ -40,3 +40,16 @@
 .read-the-docs {
   color: #888;
 }
+
+#root {
+  max-width: none;            /* allow full-width */
+  padding: 0;                 /* remove the 2 rem that caused vertical overflow */
+  text-align: left;           /* optional – keep headings left-aligned now */
+}
+
+.setup-container {
+  display: flex;
+  flex-direction: column;   /* buttons + grid stacked vertically */
+  align-items: center;      /* horizontal centring */
+  width: 100%;
+}
