@@ -1,20 +1,29 @@
-
 import dotenv from 'dotenv';
 import path from 'path';
 import app from './app';
 import http from 'http'; 
 import { Server } from 'socket.io';
 import { webSocketManager } from './services/webSocketManager';
-
+import { simulationStateService } from './services/simulationStateService'; //  Adding new  line
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const port = process.env.PORT || 3001; 
 const server = http.createServer(app);
 
+const io = new Server(server, {
+  path: '/ws',
+  cors: {
+    origin: '*', //  can restrict in prod
+    methods: ['GET', 'POST'],
+  },
+});
 
-const io = new Server(server, { cors: { origin: '*' } });
-webSocketManager.init(io);
+//  Inject simulationStateService before starting
+webSocketManager.setSimulationStateService(simulationStateService);
+webSocketManager.init(io); // Now simState is safely available
+
+export { io, server };
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
@@ -36,4 +45,3 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
-  
