@@ -2,7 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { SimulationStateService } from './simulationStateService';
 
 /**
- * Centralised wrapper around Socket.IO.
+ * Centralized wrapper around Socket.IO.
  * Responsible for pushing simulation data to every connected client.
  */
 export class WebSocketManager {
@@ -10,15 +10,7 @@ export class WebSocketManager {
   private io?: Server;
 
   /** Simulation state service used to retrieve current state snapshots. */
-  private readonly simState: SimulationStateService;
-
-  /**
-   * Constructs a new WebSocketManager.
-   * @param simState - An instance of the SimulationStateService.
-   */
-  constructor(simState: SimulationStateService) {
-    this.simState = simState;
-  }
+  private simState?: SimulationStateService;
 
   /**
    * Initializes the WebSocket server and sets up the connection listener.
@@ -31,51 +23,53 @@ export class WebSocketManager {
 
     io.on('connection', (socket: Socket) => {
       console.log('WS — client connected:', socket.id);
-      socket.emit('initial_state', this.buildFullState());
+      if (this.simState) {
+        socket.emit('initial_state', this.buildFullState());
+      } else {
+        console.warn('WebSocketManager: simState not set yet, cannot send initial_state');
+      }
     });
+  }
+
+  /**
+   * Injects the SimulationStateService after both modules are initialized,
+   * avoiding circular dependency issues.
+   */
+  public setSimulationStateService(service: SimulationStateService): void {
+    this.simState = service;
   }
 
   /* ------------ broadcast helpers ------------ */
 
-  /**
-   * Broadcasts the full current simulation state to all connected clients.
-   * Typically used after setup or grid changes.
-   */
   public broadcastInitialStateToAll(): void {
+    if (!this.simState) return;
     this.io?.emit('initial_state', this.buildFullState());
   }
 
-  /**
-   * Broadcasts the current simulation state at the end of each simulation tick.
-   */
   public broadcastSimulationUpdate(): void {
+    if (!this.simState) return;
     this.io?.emit('simulation_update', this.buildFullState());
   }
 
-  /**
-   * Broadcasts a message indicating the simulation has ended.
-   */
   public broadcastSimulationEnded(): void {
+    if (!this.simState) return;
     this.io?.emit('simulation_ended', {
       simulationTime: this.simState.getSimulationTime(),
     });
   }
 
-  /**
-   * Broadcasts an error message to all connected clients.
-   * @param message - A description of the error that occurred.
-   */
   public broadcastError(message: string): void {
     this.io?.emit('error_message', { message });
   }
 
   /* ------------ private helpers ------------- */
 
-  /**
-   * Builds a complete snapshot of the current simulation state.
-   * @returns An object representing the full simulation state.
-   */
   private buildFullState() {
+    if (!this.simState) {
+      console.warn("WebSocketManager: simState is not set, can't build state");
+      return {};
+    }
+
     return {
       currentGrid:       this.simState.getCurrentGrid(),
       gridId:            this.simState.getCurrentGridId(),
@@ -89,9 +83,5 @@ export class WebSocketManager {
   }
 }
 
-/**
- * Singleton export of the WebSocketManager.
- * Used by the rest of the backend to emit events and initialize the WS server.
- */
-import { simulationStateService } from './simulationStateService';
-export const webSocketManager = new WebSocketManager(simulationStateService);
+// Singleton export (without simState injected yet)
+export const webSocketManager = new WebSocketManager();
