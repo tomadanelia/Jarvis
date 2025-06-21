@@ -1,8 +1,20 @@
+// packages/frontend/src/components/GridDisplay.tsx
+
 import React from 'react';
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
-import {  placeRobotApi, placeTaskApi } from '../services/apiService';
+import { placeRobotApi, placeTaskApi } from '../services/apiService';
 import SimulationStatusDisplay from './SimulationStatusDisplay';
+
+// --- NEW: Define the list of available robot icons ---
+const ROBOT_ICONS = [
+  'robot1.png',
+  'robot2.png',
+  'robot3.png',
+  'robot4.png',
+  'robot5.png',
+  'robot3.png',
+];
 
 /**
  * Props for GridDisplay component.
@@ -29,13 +41,6 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
   } = useSimulationStore();
 
   /**
-   * Fetches updated simulation state from backend and updates store.
-   * this is no longer used but i will keep it alive for now
-   */
-
-
-
-  /**
    * Handles clicking on a grid cell based on the current placement mode.
    * @param x - X coordinate of the clicked cell.
    * @param y - Y coordinate of the clicked cell.
@@ -47,11 +52,13 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
       const coordinates = { x, y };
 
       if (currentPlacementMode === 'robot') {
-        await placeRobotApi({ currentLocation: coordinates, iconType: '🤖' } as Robot); // Cast for type, apiService extracts
+        // --- MODIFIED: Cycle through icons instead of using '🤖' ---
+        // We use the number of current robots to pick the next icon from our list
+        const nextIcon = ROBOT_ICONS[robots.length % ROBOT_ICONS.length];
+        await placeRobotApi({ currentLocation: coordinates, iconType: nextIcon } as Robot);
 
       } else if (currentPlacementMode === 'task') {
-        await placeTaskApi({ location: coordinates } as Task); // Cast for type, apiService extracts
-
+        await placeTaskApi({ location: coordinates } as Task);
       }
 
     } catch (err) {
@@ -78,17 +85,26 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
                 key={x}
                 onClick={() => handleCellClick(x, y)}
                 style={{
-                  width: 17,
-                  height: 17,
+                  // --- MODIFIED: Increased cell size for better visuals ---
+                  width: 32,
+                  height: 32,
                   backgroundColor: bgColor,
                   border: '1px solid #999',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: currentPlacementMode ? 'pointer' : 'default',
+                  position: 'relative', // Needed for positioning children if any
                 }}
               >
-                {robot ? '🤖' : task ? '📦' : ''}
+                {/* --- MODIFIED: Render an <img> for the robot --- */}
+                {robot ? (
+                  <img
+                    src={`/assets/robots/${robot.iconType}`}
+                    alt="robot"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : task ? '📦' : ''}
               </div>
             );
           })}
