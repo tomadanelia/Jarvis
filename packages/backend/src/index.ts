@@ -12,7 +12,6 @@ const port = process.env.PORT || 3001;
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  path: '/ws',
   cors: {
     origin: '*', //  can restrict in prod
     methods: ['GET', 'POST'],

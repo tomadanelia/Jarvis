@@ -43,9 +43,6 @@ export const connectWebSocket = () => {
 
   console.log(`WS: Attempting to connect to ${VITE_SOCKET_URL}`);
   socket = io(VITE_SOCKET_URL, {
-      path: '/ws',
-    // Optional: add connection options here if needed
-    // e.g., transports: ['websocket'],
   });
 
   socket.on('connect', () => {
