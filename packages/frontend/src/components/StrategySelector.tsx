@@ -44,7 +44,7 @@ export default function StrategySelector() {
         disabled={loading}
       >
         <option value="">-- Choose Strategy --</option>
-        <option value="nearest-first">Nearest Available Robot</option>
+        <option value="nearest">Nearest Available Robot</option>
         <option value="round-robin">Round-Robin</option>
       </select>
     </div>
