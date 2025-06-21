@@ -1,4 +1,4 @@
-import { useSimulationStore } from "@/store/simulationStore";
+import { useSimulationStore } from '../store/simulationStore'; // Note the '../'
 /**
  * SimulationStatusDisplay Component
  *
