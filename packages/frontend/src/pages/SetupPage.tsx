@@ -1,21 +1,20 @@
 // packages/frontend/src/pages/SetupPage.tsx
-
-
 import GridSelector from '../components/GridSelector';
 import GridDisplay from '../components/GridDisplay';
 import { useSimulationStore } from '../store/simulationStore';
 import StrategySelector from '../components/StrategySelector';
-
+import ControlPanel from '../components/ControlPanel'; // Corrected import if using relative path
+// Or if using alias: import ControlPanel from '@/components/ControlPanel';
 
 /**
  * SetupPage component.
- * 
+ *
  * This page allows users to:
  * - Select a grid layout
  * - Display the selected grid with robots and tasks
  * - Place robots and tasks by clicking on cells based on selected mode
  * - Reset placement mode
- * 
+ *
  * @component
  */
 export default function SetupPage() {
@@ -29,7 +28,8 @@ export default function SetupPage() {
 
   return (
     <div className="setup-container">
-      {/* ---- the rest of the JSX remains unchanged ---- */}
+      {/* Line 32 with "<C" should be removed if it was an error */}
+      {/* ---- the rest of the JSX remains unchanged ---- */} {/* This comment is fine */}
       <h1>Robot Task Simulation Setup</h1>
 
       <GridSelector />
@@ -61,6 +61,7 @@ export default function SetupPage() {
 
       {/* Strategy Selector */}
       <StrategySelector />
+      <ControlPanel /> {/* This is where you correctly added it */}
 
       {/* Grid Display */}
       <div style={{ marginTop: '2rem' }}>
