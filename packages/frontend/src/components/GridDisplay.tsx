@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
-import { getSimulationStateApi, placeRobotApi, placeTaskApi } from '../services/apiService';
+import {  placeRobotApi, placeTaskApi } from '../services/apiService';
 import SimulationStatusDisplay from './SimulationStatusDisplay';
 
 /**
@@ -25,8 +25,6 @@ interface GridDisplayProps {
 const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
   const {
     currentPlacementMode,
-    setRobots,
-    setTasks,
     selectedGridId,
   } = useSimulationStore();
 
@@ -34,18 +32,7 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
    * Fetches updated simulation state from backend and updates store.
    * this is no longer used but i will keep it alive for now
    */
-const refreshSimulationState = async () => {
-    try {
-      console.log('[GridDisplay] Refreshing simulation state...');
-      const updatedState = await getSimulationStateApi(); // Use the service function
-      console.log('[GridDisplay] Fetched updated state:', updatedState);
-      setRobots(updatedState.robots);
-      setTasks(updatedState.tasks);
-      console.log('[GridDisplay] Simulation state refreshed and store updated.');
-    } catch (error) {
-      console.error('[GridDisplay] Failed to refresh simulation state:', error);
-    }
-  };
+
 
 
   /**
