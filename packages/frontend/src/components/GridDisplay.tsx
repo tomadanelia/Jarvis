@@ -2,6 +2,7 @@ import React from 'react';
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
 import { getSimulationStateApi, placeRobotApi, placeTaskApi } from '../services/apiService';
+import SimulationStatusDisplay from './SimulationStatusDisplay';
 
 /**
  * Props for GridDisplay component.
@@ -31,6 +32,7 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
 
   /**
    * Fetches updated simulation state from backend and updates store.
+   * this is no longer used but i will keep it alive for now
    */
 const refreshSimulationState = async () => {
     try {
@@ -39,18 +41,9 @@ const refreshSimulationState = async () => {
       console.log('[GridDisplay] Fetched updated state:', updatedState);
       setRobots(updatedState.robots);
       setTasks(updatedState.tasks);
-      // You might want to update other parts of the store based on updatedState:
-      // if (updatedState.currentGrid && updatedState.gridId) {
-      //   setSelectedGrid(updatedState.gridId, updatedState.currentGrid);
-      // }
-      // if (updatedState.selectedStrategy) {
-      //   setStrategy(updatedState.selectedStrategy);
-      // }
-      // setSimulationStatus(updatedState.simulationStatus);
       console.log('[GridDisplay] Simulation state refreshed and store updated.');
     } catch (error) {
       console.error('[GridDisplay] Failed to refresh simulation state:', error);
-      // Handle this error appropriately, maybe update an error message in the store
     }
   };
 
@@ -74,7 +67,6 @@ const refreshSimulationState = async () => {
 
       }
 
-      await refreshSimulationState();
     } catch (err) {
       console.error('Failed to place item:', err);
     }
@@ -82,6 +74,7 @@ const refreshSimulationState = async () => {
 
   return (
     <div style={{ display: 'inline-block' }}>
+      <SimulationStatusDisplay/>
       {layout.map((row, y) => (
         <div key={y} style={{ display: 'flex' }}>
           {row.map((cell, x) => {
