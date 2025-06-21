@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+
 import {
     Cell,
     Coordinates,
@@ -17,6 +18,9 @@ import {
     DEFAULT_BATTERY_COST_TO_PERFORM_TASK,
     // Add any other relevant constants you might need
 } from '../config/constants'; // Adjust path as needed
+
+import { webSocketManager } from './webSocketManager';
+
 
 export type SimulationStrategy = 'nearest' | 'round-robin';
 export type SimulationRunStatus = 'idle' | 'running' | 'paused';
@@ -53,6 +57,7 @@ export class SimulationStateService {
         this.selectedStrategy = null; // Or keep current strategy? Decide on behavior. Let's reset it.
         this.simulationStatus = 'idle';
         this.simulationTime = 0;
+        webSocketManager.broadcastInitialStateToAll();
     }
 
     public getCurrentGrid(): Cell[][] | null {
@@ -115,6 +120,9 @@ export class SimulationStateService {
         };
         this.robots.push(newRobot);
         console.log(`SIM_STATE_SERVICE: Robot ${newRobot.id} added at (${location.x}, ${location.y})`);
+        
+        webSocketManager.broadcastInitialStateToAll();
+
         return newRobot;
     }
 
@@ -131,6 +139,9 @@ public deleteRobot(id: string): boolean {
     const index = this.robots.findIndex(roboti => roboti.id === id);
     if (index !== -1) {
         this.robots.splice(index, 1);
+
+        webSocketManager.broadcastInitialStateToAll();
+
         return true;
     }
     return false;
@@ -139,6 +150,9 @@ public deleteTask(id: string): boolean {
     const index = this.tasks.findIndex(task => task.id === id); 
     if (index !== -1) {
         this.tasks.splice(index, 1);
+
+        webSocketManager.broadcastInitialStateToAll();
+
         return true;
     }
     return false;
@@ -171,6 +185,7 @@ public deleteTask(id: string): boolean {
     batteryCostToPerform:DEFAULT_BATTERY_COST_TO_PERFORM_TASK,
     }
     this.tasks.push(newTask);
+     webSocketManager.broadcastInitialStateToAll();
        return newTask;
     }
     
@@ -197,6 +212,8 @@ public deleteTask(id: string): boolean {
     public setStrategy(strategy: SimulationStrategy): void {
         this.selectedStrategy = strategy;
         console.log(`SIM_STATE_SERVICE: Strategy set to ${strategy}`);
+
+        webSocketManager.broadcastInitialStateToAll();
     }
 
     public getSelectedStrategy(): SimulationStrategy | null {
@@ -245,6 +262,8 @@ public deleteTask(id: string): boolean {
         this.simulationStatus = 'idle';
         this.simulationTime = 0;
         console.log("SIM_STATE_SERVICE: Robots and tasks reset to initial states.");
+
+        webSocketManager.broadcastInitialStateToAll();
     }
 
     /**
