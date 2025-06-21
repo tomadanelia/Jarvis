@@ -56,6 +56,25 @@ export async function setupSimulationApi(gridId: string): Promise<void> {
   console.log('setupSimulationApi SUCCEEDED'); // ADD THIS LOG
 }
 /**
+ * Command the backend to start the current simulation.
+ *
+ * @returns {Promise<void>}
+ * @throws Will throw an error if the command fails.
+ */
+export async function startSimulationControlApi(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // No body needed for this specific start command as per current backend
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error(`startSimulationControlApi FAILED. Status: ${res.status}. Body: ${errorBody}`);
+    throw new Error(`Starting simulation failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
+  console.log('startSimulationControlApi SUCCEEDED');
+}
+/**
  * Place a robot in the simulation.
  *
  * @param {Robot} robot - The robot object to place in the simulation.
@@ -119,7 +138,7 @@ export async function placeTaskApi(task: Task): Promise<void> {
  * @throws Will throw an error if the selection fails.
  */
 export async function selectStrategyApi(strategy: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/select-strategy`, {
+  const res = await fetch(`${BASE_URL}/api/simulation/selectStrategy`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ strategy }),
