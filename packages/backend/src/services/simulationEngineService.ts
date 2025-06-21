@@ -4,7 +4,7 @@ import { BASE_SIMULATION_STEP_INTERVAL_MS, DEFAULT_SIMULATION_SPEED_FACTOR, LOW_
 import { moveRobotOneStep } from "./robotService";
 import { Coordinates, Task } from "@common/types";
 import { taskAssignmentService, TaskAssignmentService } from "./taskAssignmentService";
-import { webSocketManager } from './webSocketManager';
+
 
 /*Based on the TODO and the service roles, startSimulation() should:
 Check if a grid is currently loaded in SimulationStateService. (You can't start a simulation without an environment).
@@ -154,9 +154,9 @@ export class SimulationEngineService {
     const tasks = this.simulationStateService.getTasks();
     if (tasks.length > 0 && tasks.every(task => task.status === 'completed')) {
         this.endSimulation();
-        return;
+        
     }
-    webSocketManager.broadcastSimulationUpdate();
+    
 
 }
 
@@ -193,7 +193,7 @@ export class SimulationEngineService {
 
 
         console.log(`SIM_ENGINE: Simulation interval started (${intervalDelay}ms per step).`);
-        webSocketManager.broadcastInitialStateToAll();
+        
 
    
   }
@@ -263,7 +263,7 @@ export class SimulationEngineService {
         this.simulationStateService.setSimulationStatus('idle'); 
         // TODO: Calculate and save final metrics (using SupabaseService dependency)
         // TODO: Broadcast simulation_ended event (using WebSocketManager dependency)
-        webSocketManager.broadcastSimulationEnded();
+        
 
         console.log('SIM_ENGINE: Simulation ended.');
     }
