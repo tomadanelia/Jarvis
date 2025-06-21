@@ -14,7 +14,7 @@ export class PathfindingService {
  * @returns {Coordinates[]} An array of coordinates representing the path from start to end (inclusive).
  *                          Returns an empty array if no path is found.
  */
-public findPath = (grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] => {
+  public findPath(grid: Cell[][], start: Coordinates, end: Coordinates): Coordinates[] {
   if (!grid || !Array.isArray(grid) || grid.length === 0 || !grid[0] || grid[0].length === 0) {
     throw new Error("Invalid grid provided for pathfinding.");
     
