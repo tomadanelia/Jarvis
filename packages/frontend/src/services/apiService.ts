@@ -25,11 +25,9 @@ export async function fetchGrids(): Promise<any[]> {
  * @returns {Promise<any>} A promise resolving to the grid data.
  * @throws Will throw an error if the request fails.
  */
-// packages/frontend/src/services/apiService.ts
-export async function fetchGridById(id: string): Promise<any> { // Consider defining a proper return type
-  const res = await fetch(`${BASE_URL}/api/grids/${id}`); // Ensure BASE_URL is here
+export async function fetchGridById(id: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/grids/${id}`);
   if (!res.ok) {
-    // Try to get more info from the response if it's not JSON
     const errorText = await res.text();
     console.error(`fetchGridById FAILED for ID ${id}. Status: ${res.status}. Response text: ${errorText}`);
     throw new Error(`Failed to fetch grid ${id}. Status: ${res.status}. Body: ${errorText}`);
@@ -44,36 +42,17 @@ export async function fetchGridById(id: string): Promise<any> { // Consider defi
  * @throws Will throw an error if the setup fails.
  */
 export async function setupSimulationApi(gridId: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/setUp/${gridId}`, { // Critical: /setUp/:id
+  const res = await fetch(`${BASE_URL}/api/simulation/setUp/${gridId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // No body needed if gridId is in the URL param
   });
   if (!res.ok) {
-    console.error('setupSimulationApi FAILED. Status:', res.status); // ADD THIS LOG
-    throw new Error(`Simulation setup failed with status: ${res.status}`); // More informative error
+    console.error('setupSimulationApi FAILED. Status:', res.status);
+    throw new Error(`Simulation setup failed with status: ${res.status}`);
   }
-  console.log('setupSimulationApi SUCCEEDED'); // ADD THIS LOG
+  console.log('setupSimulationApi SUCCEEDED');
 }
-/**
- * Command the backend to start the current simulation.
- *
- * @returns {Promise<void>}
- * @throws Will throw an error if the command fails.
- */
-export async function startSimulationControlApi(): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/control/start`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    // No body needed for this specific start command as per current backend
-  });
-  if (!res.ok) {
-    const errorBody = await res.text();
-    console.error(`startSimulationControlApi FAILED. Status: ${res.status}. Body: ${errorBody}`);
-    throw new Error(`Starting simulation failed. Status: ${res.status}. Message: ${errorBody}`);
-  }
-  console.log('startSimulationControlApi SUCCEEDED');
-}
+
 /**
  * Place a robot in the simulation.
  *
@@ -82,27 +61,15 @@ export async function startSimulationControlApi(): Promise<void> {
  * @throws Will throw an error if the placement fails.
  */
 export async function placeRobotApi(robot: Robot): Promise<void> {
-  // The body for placeRobot on the backend expects { location, iconType }
-  // Your frontend is sending the whole Robot object from common/types.
-  // The backend controller for placeRobot is:
-  //   const {location,iconType}=req.body;
-  // This will work if `robot` object sent from frontend has `location` and `iconType` as top-level properties.
-  // Your `Robot` type does have `currentLocation` (which should map to `location`) and `iconType`.
-  // We might need to adjust the body sent or how the backend extracts it.
-  // For now, let's fix the URL.
-  // The backend controller expects: { location: Coordinates, iconType: string }
-  // The common Robot type has: iconType: string, currentLocation: Coordinates
-  // We should send what the backend expects.
-
   const payload = {
-    location: robot.currentLocation, // Or robot.initialLocation depending on desired behavior
+    location: robot.currentLocation,
     iconType: robot.iconType,
   };
 
-  const res = await fetch(`${BASE_URL}/api/simulation/placeRobot`, { // Corrected URL (no dash)
+  const res = await fetch(`${BASE_URL}/api/simulation/placeRobot`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload), // Send only what the backend expects
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const errorText = await res.text();
@@ -112,16 +79,10 @@ export async function placeRobotApi(robot: Robot): Promise<void> {
 }
 
 export async function placeTaskApi(task: Task): Promise<void> {
-  // Backend controller for placeTask is:
-  //   const location=req.body;
-  // It expects the location object directly as the body, not nested.
-  // Your common Task type has: location: Coordinates
-  // So sending task.location should be correct.
-
-  const res = await fetch(`${BASE_URL}/api/simulation/placeTask`, { // Corrected URL (no dash)
+  const res = await fetch(`${BASE_URL}/api/simulation/placeTask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(task.location), // Send only the location object
+    body: JSON.stringify(task.location),
   });
   if (!res.ok) {
     const errorText = await res.text();
@@ -133,7 +94,7 @@ export async function placeTaskApi(task: Task): Promise<void> {
 /**
  * Select a task assignment strategy for the simulation.
  *
- * @param {string} strategy - The strategy name to apply (e.g., 'nearest-first').
+ * @param {string} strategy - The strategy name to apply.
  * @returns {Promise<void>}
  * @throws Will throw an error if the selection fails.
  */
@@ -147,39 +108,96 @@ export async function selectStrategyApi(strategy: string): Promise<void> {
 }
 
 /**
- * Reset the current simulation setup to its initial state.
- *
- * @returns {Promise<void>}
- * @throws Will throw an error if the reset fails.
- */
-export async function resetSetupApi(): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/simulation/control/reset`, {
-    method: 'POST',
-  });
-  if (!res.ok) throw new Error('Resetting setup failed');
-}
-
-/**
  * Get the current simulation state including robots and tasks.
  *
- * @returns {Promise<{ robots: Robot[]; tasks: Task[] }>} A promise resolving to an object with robots and tasks arrays.
+ * @returns {Promise<any>} A promise resolving to the full simulation state.
  * @throws Will throw an error if the fetch fails.
  */
 export async function getSimulationStateApi(): Promise<{
-  currentGrid: Cell[][] | null; // Match what backend getSetupState returns
+  currentGrid: Cell[][] | null;
   gridId: string | null;
   gridName: string | null;
   robots: Robot[];
   tasks: Task[];
-  selectedStrategy: string | null; // Or your SimulationStrategy type
-  simulationStatus: SimulationStatus; // Your SimulationStatus type
+  selectedStrategy: string | null;
+  simulationStatus: SimulationStatus;
   simulationTime: number;
 }> {
-  const res = await fetch(`${BASE_URL}/api/simulation/getSetupState`); // Correct endpoint
+  const res = await fetch(`${BASE_URL}/api/simulation/getSetupState`);
   if (!res.ok) {
     const errorText = await res.text();
     console.error(`getSimulationStateApi FAILED. Status: ${res.status}. Response text: ${errorText}`);
     throw new Error(`Failed to fetch simulation state. Status: ${res.status}. Body: ${errorText}`);
   }
   return res.json();
+}
+
+// --- Simulation Control APIs ---
+
+/**
+ * Command the backend to start the current simulation.
+ */
+export async function startSimulationControlApi(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/start`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Starting simulation failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
+}
+
+/**
+ * Command the backend to pause the current simulation.
+ */
+export async function pauseSimulationControlApi(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/pause`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Pausing simulation failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
+}
+
+/**
+ * Command the backend to resume the current simulation.
+ */
+export async function resumeSimulationControlApi(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/resume`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Resuming simulation failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
+}
+
+/**
+ * Command the backend to reset the current simulation to its initial state.
+ */
+export async function resetSimulationControlApi(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/reset`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Resetting simulation failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
+}
+
+/**
+ * Command the backend to set the simulation speed factor.
+ * @param {number} factor The new speed factor.
+ */
+export async function setSpeedFactorControlApi(factor: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/simulation/control/speed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ factor }),
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Setting speed factor failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
 }

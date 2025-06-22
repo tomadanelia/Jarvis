@@ -1,38 +1,92 @@
-// packages/frontend/src/components/ControlPanel.tsx
+import React, { useState } from 'react';
 import { useSimulationStore } from '../store/simulationStore';
-import { startSimulationControlApi } from '../services/apiService';
+import {
+  startSimulationControlApi,
+  pauseSimulationControlApi,
+  resumeSimulationControlApi,
+  resetSimulationControlApi,
+  setSpeedFactorControlApi,
+} from '../services/apiService';
+
+const SPEED_FACTORS = [0.25, 0.5, 1.0, 2.0, 4.0];
 
 export default function ControlPanel() {
-  const simulationStatus = useSimulationStore((state) => state.simulationStatus);
-  const selectedGridId = useSimulationStore((state) => state.selectedGridId);
-  // If you need more, add more individual selectors:
-  // const isLoading = useSimulationStore((state) => state.isLoading);
+  const simulationStatus = useSimulationStore(state => state.simulationStatus);
+  const selectedGridId = useSimulationStore(state => state.selectedGridId);
+  const [currentSpeed, setCurrentSpeed] = useState(1.0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleStartSimulation = async () => {
-    if (!selectedGridId) {
-      console.error('No grid selected');
-      return;
-    }
-
+  // Generic handler to wrap API calls with loading state
+  const handleApiCall = async (apiCall: () => Promise<void>) => {
+    if (isLoading) return;
+    setIsLoading(true);
     try {
-      await startSimulationControlApi();
-      console.log('Simulation started successfully');
+      await apiCall();
     } catch (error) {
-      console.error('Error starting simulation:', error);
+      console.error('API call failed:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleStart = () => handleApiCall(startSimulationControlApi);
+  const handlePause = () => handleApiCall(pauseSimulationControlApi);
+  const handleResume = () => handleApiCall(resumeSimulationControlApi);
+  const handleReset = () => handleApiCall(resetSimulationControlApi);
+
+  const handleSpeedChange = async (newSpeed: number) => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      await setSpeedFactorControlApi(newSpeed);
+      setCurrentSpeed(newSpeed);
+    } catch (error) {
+      console.error('Failed to set speed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const canInteract = !!selectedGridId;
+
   return (
-    <div style={{ marginTop: '1rem', padding: '10px', border: '1px solid #555' }}>
-      <h2>Simulation Controls</h2>
-      <button
-        onClick={handleStartSimulation}
-        disabled={simulationStatus === 'running' || !selectedGridId}
-        style={{ marginRight: '10px' }}
-      >
-        Start Simulation
-      </button>
-      {/* ... other buttons ... */}
+    <div className="control-panel">
+      <div className="button-group">
+        {simulationStatus === 'idle' && (
+          <button onClick={handleStart} disabled={!canInteract || isLoading}>
+            Start
+          </button>
+        )}
+        {simulationStatus === 'paused' && (
+          <button onClick={handleResume} disabled={!canInteract || isLoading}>
+            Resume
+          </button>
+        )}
+        {simulationStatus === 'running' && (
+          <button onClick={handlePause} disabled={!canInteract || isLoading}>
+            Pause
+          </button>
+        )}
+        <button onClick={handleReset} disabled={!canInteract || isLoading}>
+          Reset
+        </button>
+      </div>
+
+      <div className="speed-controls">
+        <span style={{ color:'#ccc'}}>Speed:</span>
+        <div className="button-group">
+          {SPEED_FACTORS.map(factor => (
+            <button
+              key={factor}
+              onClick={() => handleSpeedChange(factor)}
+              disabled={isLoading || !canInteract}
+              className={currentSpeed === factor ? 'active' : ''}
+            >
+              {factor}x
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
