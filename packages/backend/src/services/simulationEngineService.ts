@@ -241,9 +241,10 @@ private resolveMovementConflicts(intentions: Map<string, Coordinates | null>): S
                     (otherRobotIntention && 
                      otherRobotIntention.x === intendedNextCell.x &&
                      otherRobotIntention.y === intendedNextCell.y)) {
-                    canMoveThisTick = false;
-                    console.log(`SIM_ENGINE_CONFLICT (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} wants ${intendedNextCell.x},${intendedNextCell.y}, but ${otherRobot.id} is there and not definitively moving out/away.`);
-                    break;
+                   canMoveThisTick = false;
+robot.waitingBecauseOfRobotId = otherRobot.id; 
+console.log(`SIM_ENGINE_CONFLICT ... Robot ${robot.id} ... but ${otherRobot.id} is there...`);
+break;
                 }
             }
             if (approvedToMove.has(otherRobot.id)) {
@@ -328,8 +329,15 @@ private handleRepathForWaitingRobot(robotId: string): void {
 
     console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} attempting re-path from (${robot.currentLocation.x},${robot.currentLocation.y}) to target (${robot.currentTarget.x},${robot.currentTarget.y}).`);
 
-    let problematicCellToBlockTemporarily: Coordinates | null = null;
-    if (robot.currentPath && robot.currentPath.length > 0) {
+   let problematicCellToBlockTemporarily: Coordinates | null = null;
+if (robot.waitingBecauseOfRobotId) { // Assuming this info is passed or set
+    const blockingRobot = this.simulationStateService.getRobotById(robot.waitingBecauseOfRobotId);
+    if (blockingRobot) {
+        problematicCellToBlockTemporarily = blockingRobot.currentLocation;
+        console.log(`SIM_ENGINE_REPATH: Problematic cell for ${robot.id} is current location of ${blockingRobot.id}: (${problematicCellToBlockTemporarily.x},${problematicCellToBlockTemporarily.y})`);
+    }
+    robot.waitingBecauseOfRobotId = undefined; // Clear it
+} else if(robot.currentPath && robot.currentPath.length > 0) {
         problematicCellToBlockTemporarily = robot.currentPath[0];
         console.log(`SIM_ENGINE_REPATH: Assuming problematic cell for ${robotId} is next step: (${problematicCellToBlockTemporarily.x},${problematicCellToBlockTemporarily.y})`);
     } else {

@@ -32,6 +32,7 @@ export interface Robot{
     consecutiveWaitSteps: number;
     currentLocation: Coordinates;
     initialLocation: Coordinates;
-    workProgress?: number; 
+    workProgress?: number;
+    waitingBecauseOfRobotId?: string; 
 
 }
