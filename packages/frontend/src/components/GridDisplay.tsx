@@ -12,8 +12,6 @@ const ROBOT_ICONS = [
   '/assets/robots/robot5.png',
 ];
 
-// Use a precise cell size that includes the border for accurate calculations.
-// A cell with width/height 18px and a 1px border on all sides will work well.
 const CELL_SIZE = 18;
 const LOW_BATTERY_THRESHOLD = 20;
 
@@ -23,9 +21,6 @@ interface GridDisplayProps {
   tasks: Task[];
 }
 
-/**
- * Renders a single robot, handling its position, animation, and low-battery indicator.
- */
 const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
   const isLowBattery = robot.battery < LOW_BATTERY_THRESHOLD;
   const style: React.CSSProperties = {
@@ -38,7 +33,7 @@ const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10 // Ensure robots are on top of tasks
+    zIndex: 10
   };
 
   return (
@@ -53,9 +48,6 @@ const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
   );
 };
 
-/**
- * Renders a single task, handling its visual style and "in-progress" animation.
- */
 const TaskVisual: React.FC<{ task: Task }> = ({ task }) => {
   const style: React.CSSProperties = {
     position: 'absolute',
@@ -66,7 +58,7 @@ const TaskVisual: React.FC<{ task: Task }> = ({ task }) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5 // Ensure tasks are below robots
+    zIndex: 5
   };
 
   const isWorking = task.status === 'inProgress';
@@ -98,21 +90,19 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
   };
 
   return (
-    // This outer div now correctly separates the StatusDisplay from the grid system.
     <div>
       <SimulationStatusDisplay />
 
-      {/* This is the key: a dedicated relative container for the grid and its layers. */}
       <div className="grid-container">
-        {/* Layer 1: The static grid background */}
         <div className="grid-background">
           {layout.map((row, y) => (
             <div key={`row-${y}`} style={{ display: 'flex' }}>
               {row.map((cell, x) => {
-                let bgColor = '#eee';
-                if (cell.type === 'walkable') bgColor = '#ccc';
-                else if (cell.type === 'wall') bgColor = '#333';
-                else if (cell.type === 'chargingStation') bgColor = 'gold';
+                // A classier, more muted color palette
+                let bgColor = '#2d3748'; // Default to wall/empty color
+                if (cell.type === 'walkable') bgColor = '#4a5568';
+                else if (cell.type === 'wall') bgColor = '#2d3748';
+                else if (cell.type === 'chargingStation') bgColor = '#38b2ac';
 
                 return (
                   <div
@@ -123,7 +113,6 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
                       height: `${CELL_SIZE}px`,
                       backgroundColor: bgColor,
                       boxSizing: 'border-box',
-                      border: '1px solid #999',
                       cursor: currentPlacementMode ? 'pointer' : 'default',
                     }}
                   />
@@ -133,14 +122,12 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
           ))}
         </div>
 
-        {/* Layer 2: Tasks (Absolutely positioned relative to grid-container) */}
         <div className="item-layer">
           {tasks.map(task => (
             <TaskVisual key={task.id} task={task} />
           ))}
         </div>
 
-        {/* Layer 3: Robots (Absolutely positioned relative to grid-container) */}
         <div className="item-layer">
           {robots.map(robot => (
             <RobotVisual key={robot.id} robot={robot} />

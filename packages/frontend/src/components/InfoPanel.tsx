@@ -47,7 +47,7 @@ export default function InfoPanel() {
 
   return (
     <div className="info-panel">
-      <h2>Robot Information</h2>
+      <h2 style={{ color: '#ccc' }}>Robot Information</h2>
       {robots.length === 0 ? (
         <p>No robots have been placed on the grid.</p>
       ) : (
@@ -62,7 +62,7 @@ export default function InfoPanel() {
                 <span className="robot-status">Status: {robot.status}</span>
                 <span className="robot-target">Target: {formatTarget(robot)}</span>
                 <div className="robot-battery-info">
-                  <span>{Math.round(robot.battery)}%</span>
+                  <span style={{color:'#ccc'}}>{Math.round(robot.battery)}%</span>
                   <BatteryBar battery={robot.battery} />
                 </div>
               </div>
