@@ -432,15 +432,24 @@ private handlePerformingTaskLogic(robot: Robot): void {
         this.simulationStateService.updateRobotState(robot.id, { status: 'idle', assignedTaskId: undefined, workProgress: undefined });
     }
 }
+
 /**
  * CHARGING_DURATION_STEPS is defined in constants.ts
  * battery increase per step of charging
  * @param robot  robot that is currently charging called in ProcessAllRobotLogicAfterMovement
  */
 private handleChargingLogic(robot: Robot): void {
-    throw new Error("Unimplemented");
-}
+    
+    const batteryIncreasePerStep = robot.maxBattery / CHARGING_DURATION_STEPS; // Example logic
+    const newBattery = Math.min(robot.battery + batteryIncreasePerStep, robot.maxBattery);
 
+    this.simulationStateService.updateRobotState(robot.id, { battery: newBattery });
+
+    if (newBattery >= robot.maxBattery) {
+        this.simulationStateService.updateRobotState(robot.id, { status: 'idle' });
+        console.log(`SIM_ENGINE_CHARGED (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} finished charging.`);
+    }
+}
 /**
  * 
  * @param robot gets robot as parameter that is idle and completed just task or has not been assigned yet
@@ -448,7 +457,39 @@ private handleChargingLogic(robot: Robot): void {
  * @returns void handles logic of idle robot repathing and reassigning tasks
  */
 private handleIdleLogic(robot: Robot): void {
-    throw new Error("Unimplemented");
+    if (robot.battery < LOW_BATTERY_THRESHOLD) { 
+        const grid = this.simulationStateService.getCurrentGrid();
+        if (!grid) return;
+        const stations = this.simulationStateService.getChargingStations();
+        if (stations.length === 0) {
+            console.warn(`SIM_ENGINE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} needs charge but no charging stations found.`);
+            return;
+        }
+
+        let shortestPathToCharger: Coordinates[] | null = null;
+        let bestChargerLocation: Coordinates | null = null;
+
+        for (const station of stations) {
+            const path = this.pathfindingService.findPath(grid, robot.currentLocation, station);
+            if (path && path.length > 0 && (!shortestPathToCharger || path.length < shortestPathToCharger.length)) {
+                shortestPathToCharger = path;
+                bestChargerLocation = station;
+            }
+        }
+
+        if (shortestPathToCharger && bestChargerLocation) {
+            console.log(`SIM_ENGINE_TO_CHARGE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} going to charge at ${bestChargerLocation.x},${bestChargerLocation.y}.`);
+            this.simulationStateService.updateRobotState(robot.id, {
+                status: 'onChargingWay',
+                currentTarget: bestChargerLocation,
+                currentPath: shortestPathToCharger
+            });
+        } else {
+            console.warn(`SIM_ENGINE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} needs charge but cannot find path to any station.`);
+        }
+    } else {
+        this.taskAssignmentService.findAndAssignTaskForIdleRobot(robot.id);
+    }
 }
 
 }
