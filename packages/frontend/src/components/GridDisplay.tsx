@@ -5,6 +5,19 @@ import {  placeRobotApi, placeTaskApi } from '../services/apiService';
 import SimulationStatusDisplay from './SimulationStatusDisplay';
 
 /**
+ * List of available robot icons.
+ * These paths are relative to the `public` directory, so they are served from the root.
+ */
+const ROBOT_ICONS = [
+  '/assets/robots/robot1.png',
+  '/assets/robots/robot2.png',
+  '/assets/robots/robot3.png',
+  '/assets/robots/robot4.png',
+  '/assets/robots/robot5.png',
+  '/assets/robots/robot3.png',
+];
+
+/**
  * Props for GridDisplay component.
  */
 interface GridDisplayProps {
@@ -47,7 +60,9 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
       const coordinates = { x, y };
 
       if (currentPlacementMode === 'robot') {
-        await placeRobotApi({ currentLocation: coordinates, iconType: '🤖' } as Robot); // Cast for type, apiService extracts
+        // Cycle through the available icons based on the number of robots already on the grid.
+        const nextIcon = ROBOT_ICONS[robots.length % ROBOT_ICONS.length];
+        await placeRobotApi({ currentLocation: coordinates, iconType: nextIcon } as Robot);
 
       } else if (currentPlacementMode === 'task') {
         await placeTaskApi({ location: coordinates } as Task); // Cast for type, apiService extracts
@@ -88,7 +103,15 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
                   cursor: currentPlacementMode ? 'pointer' : 'default',
                 }}
               >
-                {robot ? '🤖' : task ? '📦' : ''}
+                {robot ? (
+                  <img
+                    src={robot.iconType}
+                    alt="robot"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : task ? (
+                  '📦'
+                ) : ('')}
               </div>
             );
           })}
