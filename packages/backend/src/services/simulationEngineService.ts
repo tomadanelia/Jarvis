@@ -187,24 +187,92 @@ export class SimulationEngineService {
 
         console.log('SIM_ENGINE: Simulation ended.');
     }
-/**
- * @specification
- * optimized by checking if multiple robots intend to move to the same cell only when they are on their way to a task or charger.
- * @returns A map of robot IDs to their next intended movement coordinates, or null if no movement is intended.
- * @param no parameters
- */
-private determineMovementIntentions(): Map<string, Coordinates | null> {
-    throw new Error("Unimplemented");
-}
+  /**
+     * @specification
+     * optimized by checking if multiple robots intend to move to the same cell only when they are on their way to a task or charger.
+     * @returns A map of robot IDs to their next intended movement coordinates, or null if no movement is intended.
+     * @param no parameters
+     * 
+     * */
+    private determineMovementIntentions(): Map<string, Coordinates | null> { 
+    const intentions = new Map<string, Coordinates | null>();
+    const robots = this.simulationStateService.getRobots();
 
-/**
- * Resolves movement conflicts by checking if multiple robots intend to move to the same cell.
- * If conflicts are found, it randomly selects one robot to move and sets others to wait.
- * @param intentions A map of robot IDs to their intended movement coordinates.
- * @returns A Set of robot IDs to their approved movement coordinates.
- */
+    for (const robot of robots) {
+        let nextCell: Coordinates | null = null;
+        if ((robot.status === 'onTaskWay' || robot.status === 'onChargingWay') &&
+            robot.currentPath && robot.currentPath.length > 0) {
+            nextCell = robot.currentPath[0];
+        }
+        intentions.set(robot.id, nextCell);
+    }
+    return intentions;
+}
+    /**
+     * Resolves movement conflicts by checking if multiple robots intend to move to the same cell.
+     * If conflicts are found, it randomly selects one robot to move and sets others to wait.
+     * @param intentions A map of robot IDs to their intended movement coordinates.
+     * @returns A Set of robot IDs to their approved movement coordinates.
+     */ 
 private resolveMovementConflicts(intentions: Map<string, Coordinates | null>): Set<string> {
-    throw new Error("Unimplemented");
+    const approvedToMove = new Set<string>();
+    const robots = this.simulationStateService.getRobots();
+    const sortedRobots = [...robots].sort((a, b) => a.id.localeCompare(b.id));
+/**
+ *  If otherRobot is at my target, 
+ * it can only be okay if otherRobot is *also* moving *out* of that cell AND otherRobot has 
+ * higher priority (already processed and approved) OR is moving to a different cell.
+ * 
+ */
+    for (const robot of sortedRobots) {
+        const intendedNextCell = intentions.get(robot.id);
+
+        if (!intendedNextCell) {
+            continue;
+        }
+
+        let canMoveThisTick = true;
+        for (const otherRobot of robots) {
+            if (robot.id === otherRobot.id) continue;
+            if (otherRobot.currentLocation.x === intendedNextCell.x &&
+                otherRobot.currentLocation.y === intendedNextCell.y) {
+                const otherRobotIntention = intentions.get(otherRobot.id);
+                if (!approvedToMove.has(otherRobot.id) || 
+                    (otherRobotIntention && 
+                     otherRobotIntention.x === intendedNextCell.x &&
+                     otherRobotIntention.y === intendedNextCell.y)) {
+                    canMoveThisTick = false;
+                    console.log(`SIM_ENGINE_CONFLICT (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} wants ${intendedNextCell.x},${intendedNextCell.y}, but ${otherRobot.id} is there and not definitively moving out/away.`);
+                    break;
+                }
+            }
+            if (approvedToMove.has(otherRobot.id)) {
+                const otherRobotApprovedIntention = intentions.get(otherRobot.id); 
+                if (otherRobotApprovedIntention &&
+                    otherRobotApprovedIntention.x === intendedNextCell.x &&
+                    otherRobotApprovedIntention.y === intendedNextCell.y) {
+                    canMoveThisTick = false;
+                    console.log(`SIM_ENGINE_CONFLICT (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} yielding for ${intendedNextCell.x},${intendedNextCell.y} to higher priority ${otherRobot.id}.`);
+                    break;
+                }
+            }
+        }
+
+        if (canMoveThisTick) {
+            approvedToMove.add(robot.id);
+            this.simulationStateService.updateRobotState(robot.id, { consecutiveWaitSteps: 0 }); 
+        } else {
+            const currentRobotState = this.simulationStateService.getRobotById(robot.id)!;
+            const newWaitSteps = (currentRobotState.consecutiveWaitSteps || 0) + 1;
+            this.simulationStateService.updateRobotState(robot.id, { consecutiveWaitSteps: newWaitSteps });
+
+            if (newWaitSteps >= ROBOT_MAX_CONSECUTIVE_WAIT_STEPS_FOR_REPATH) { 
+                console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} waiting too long. Attempting re-path.`);
+                this.handleRepathForWaitingRobot(robot.id);
+            }
+        }
+    }
+    return approvedToMove;
 }
 
 /**
