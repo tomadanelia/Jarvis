@@ -5,6 +5,8 @@ import { moveRobotOneStep } from "./robotService";
 import { Cell, Coordinates, Robot, Task } from "@common/types";
 import { taskAssignmentService, TaskAssignmentService } from "./taskAssignmentService";
 import { webSocketManager } from './webSocketManager';
+import { supabaseService } from './supabaseService';
+
 
 
 /*Based on the TODO and the service roles, startSimulation() should:
@@ -19,6 +21,8 @@ export class SimulationEngineService {
   private taskAssignmentService: TaskAssignmentService;
   private intervalId: NodeJS.Timeout | null = null; // Store the interval ID
   private speedFactor: number = DEFAULT_SIMULATION_SPEED_FACTOR; // To control speed
+  private rechargeCount = 0; // tracks how many times robots completed a full recharge
+
   /**
    * Creates a new SimulationEngineService.
    * @param simulationStateService The simulation state service instance.
@@ -177,16 +181,28 @@ export class SimulationEngineService {
    * Ends the simulation by pausing it, setting the status to 'idle', and performing any cleanup or finalization.
    * @private
    */
-  private endSimulation(): void {
-        this.pauseSimulation();
-        this.simulationStateService.setSimulationStatus('idle'); 
-        // TODO: Calculate and save final metrics (using SupabaseService dependency)
-        // TODO: Broadcast simulation_ended event (using WebSocketManager dependency)
-        webSocketManager.broadcastSimulationEnded();
+  private async endSimulation(): Promise<void> {
+    this.pauseSimulation();
+    this.simulationStateService.setSimulationStatus('idle');
+    webSocketManager.broadcastSimulationEnded();
+  
+    const result = {
+      gridId: this.simulationStateService.getCurrentGridId() ?? "",
+      gridName: this.simulationStateService.getCurrentGridName() ?? "",
+      strategy: this.simulationStateService.getSelectedStrategy() ?? "unknown",
+      totalTime: this.simulationStateService.getSimulationTime(),
+      totalRecharges: this.rechargeCount,
+    };
+  
+    try {
+        await supabaseService.saveSimulationResult(result);
 
-
-        console.log('SIM_ENGINE: Simulation ended.');
+      console.log("SIM_ENGINE: metrics stored in Supabase.");
+    } catch (err: any) {
+      console.error("SIM_ENGINE: metric save failed:", err.message);
     }
+}
+
   /**
      * @specification
      * optimized by checking if multiple robots intend to move to the same cell only when they are on their way to a task or charger.
@@ -194,6 +210,7 @@ export class SimulationEngineService {
      * @param no parameters
      * 
      * */
+
     private determineMovementIntentions(): Map<string, Coordinates | null> { 
     const intentions = new Map<string, Coordinates | null>();
     const robots = this.simulationStateService.getRobots();
@@ -528,6 +545,7 @@ private handleChargingLogic(robot: Robot): void {
     if (newBattery >= robot.maxBattery) {
         this.simulationStateService.updateRobotState(robot.id, { status: 'idle' });
         console.log(`SIM_ENGINE_CHARGED (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} finished charging.`);
+        this.rechargeCount++;
     }
 }
 /**
@@ -571,7 +589,7 @@ private handleIdleLogic(robot: Robot): void {
         this.taskAssignmentService.findAndAssignTaskForIdleRobot(robot.id);
     }
 }
-
+  
 }
 
 const simulationEngineService = new SimulationEngineService(simulationStateService, pathfindingService,taskAssignmentService);

@@ -2,6 +2,8 @@
 import { Cell } from '@common/types'; // Assuming types.ts is accessible via this path alias
 import { supabaseApiPublicClient } from '../config/supabaseClient';
 
+
+
 /**
  * Represents the structure of a grid definition as fetched from the database.
  * The `layout` property is expected to be a fully processed 2D array of Cell objects.
@@ -66,4 +68,32 @@ export class SupabaseService {
         console.log(`SupabaseService: Grid with ID ${id} fetched successfully.`);
         return data; // data will be the single grid object or null if .single() found nothing (and error.code was PGRST116)
     }
-}
+
+    
+  //saves final simulation results to the 'simulation_results' table.
+  //called by SimulationEngineService when everything is done.
+
+  
+
+  public async saveSimulationResult(resultData: {
+    gridId: string;
+    gridName: string;
+    strategy: string;
+    totalTime: number;
+    totalRecharges: number;
+  }): Promise<void> {
+    const { error } = await supabaseApiPublicClient
+      .from('simulation_results')
+      .insert([resultData]);
+  
+    if (error) {
+      console.error('SupabaseService: Failed to save simulation result:', error.message);
+      throw error;
+    } else {
+      console.log('SupabaseService: Simulation result saved successfully.');
+    }
+  }
+  
+  }
+
+export const supabaseService = new SupabaseService();
