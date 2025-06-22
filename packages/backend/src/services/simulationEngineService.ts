@@ -340,6 +340,7 @@ private handleRepathForWaitingRobot(robotId: string): void {
         }
     }
 }
+  
 /**
  * this is called after every movement in step() method and controls robot status path and related things after movement
  * This method will now contain the big switch statement logic that was previously directly in  step() method's loop.
@@ -347,8 +348,52 @@ private handleRepathForWaitingRobot(robotId: string): void {
  * and uses helper methods for every type of status of robot idle,ontaskway,onChargingway
  * calls handlers of al 3 types of status of robot 
  */
-private processAllRobotLogicAfterMovement(): void {
-    throw new Error("Unimplemented");
+  private processAllRobotLogicAfterMovement(): void {
+    const robots = this.simulationStateService.getRobots();
+    for (const robot of robots) {
+        const currentRobotState = this.simulationStateService.getRobotById(robot.id);
+        if (!currentRobotState) continue;
+
+        const isAtTarget = currentRobotState.currentTarget &&
+            currentRobotState.currentLocation.x === currentRobotState.currentTarget.x &&
+            currentRobotState.currentLocation.y === currentRobotState.currentTarget.y;
+
+        if (isAtTarget && (currentRobotState.status === 'onTaskWay' || currentRobotState.status === 'onChargingWay') && (!currentRobotState.currentPath || currentRobotState.currentPath.length === 0) ) {
+            if (currentRobotState.status === 'onTaskWay') {
+                console.log(`SIM_ENGINE_ARRIVAL (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} arrived at task.`);
+                this.simulationStateService.updateRobotState(currentRobotState.id, {
+                    status: 'performingTask', 
+                    currentTarget: undefined,
+                });
+                const updatedRobotStateForTask = this.simulationStateService.getRobotById(robot.id)!;
+                this.handlePerformingTaskLogic(updatedRobotStateForTask); 
+                continue; 
+            } else if (currentRobotState.status === 'onChargingWay') {
+                console.log(`SIM_ENGINE_ARRIVAL (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} arrived at charger.`);
+                this.simulationStateService.updateRobotState(currentRobotState.id, {
+                    status: 'charging',
+                    currentTarget: undefined,
+                });
+                const updatedRobotStateForCharging = this.simulationStateService.getRobotById(robot.id)!;
+                this.handleChargingLogic(updatedRobotStateForCharging); 
+                continue; 
+            }
+        }
+        switch (currentRobotState.status) {
+            case 'performingTask':
+                this.handlePerformingTaskLogic(currentRobotState);
+                break;
+            case 'charging':
+                this.handleChargingLogic(currentRobotState);
+                break;
+            case 'idle':
+                this.handleIdleLogic(currentRobotState);
+                break;
+            case 'onTaskWay': 
+            case 'onChargingWay': 
+                break;
+        }
+    }
 }
 
 /**
@@ -357,9 +402,36 @@ private processAllRobotLogicAfterMovement(): void {
  * @returns void
  */
 private handlePerformingTaskLogic(robot: Robot): void {
-    throw new Error("Unimplemented");
-}
+    const task = this.simulationStateService.getTaskById(robot.assignedTaskId!);
+    if (task && task.status !== 'completed') { 
+        if (!robot.workProgress || robot.workProgress === 0) {
+            const batteryAfterStartingTask = robot.battery - (task.batteryCostToPerform || 0);
+            if (batteryAfterStartingTask < 0) {
+                console.warn(`SIM_ENGINE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} cannot perform task ${task.id}, insufficient battery. Setting idle.`);
+                this.simulationStateService.updateRobotState(robot.id, { status: 'idle', assignedTaskId: undefined, workProgress: undefined });
+                this.simulationStateService.updateTaskState(task.id, { status: 'unassigned' });
+                return;
+            }
+            this.simulationStateService.updateRobotState(robot.id, { battery: batteryAfterStartingTask, workProgress: 1 });
+        } else {
+            this.simulationStateService.updateRobotState(robot.id, { workProgress: (robot.workProgress || 0) + 1 });
+        }
 
+        const currentRobotState = this.simulationStateService.getRobotById(robot.id)!;
+
+        if ((currentRobotState.workProgress || 0) >= task.workDuration) {
+            console.log(`SIM_ENGINE_TASK_DONE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} completed task ${task.id}.`);
+            this.simulationStateService.updateTaskState(task.id, { status: 'completed' });
+            this.simulationStateService.updateRobotState(currentRobotState.id, {
+                status: 'idle',
+                assignedTaskId: undefined,
+                workProgress: undefined,
+            });
+        }
+    } else if (task && task.status === 'completed' && robot.status === 'performingTask') {
+        this.simulationStateService.updateRobotState(robot.id, { status: 'idle', assignedTaskId: undefined, workProgress: undefined });
+    }
+}
 /**
  * CHARGING_DURATION_STEPS is defined in constants.ts
  * battery increase per step of charging
