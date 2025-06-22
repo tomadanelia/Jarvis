@@ -1,22 +1,10 @@
-// packages/frontend/src/pages/SetupPage.tsx
 import GridSelector from '../components/GridSelector';
 import GridDisplay from '../components/GridDisplay';
 import { useSimulationStore } from '../store/simulationStore';
 import StrategySelector from '../components/StrategySelector';
-import ControlPanel from '../components/ControlPanel'; // Corrected import if using relative path
-// Or if using alias: import ControlPanel from '@/components/ControlPanel';
+import ControlPanel from '../components/ControlPanel';
+import InfoPanel from '../components/InfoPanel'; // Import the new component
 
-/**
- * SetupPage component.
- *
- * This page allows users to:
- * - Select a grid layout
- * - Display the selected grid with robots and tasks
- * - Place robots and tasks by clicking on cells based on selected mode
- * - Reset placement mode
- *
- * @component
- */
 export default function SetupPage() {
   const {
     selectedGridLayout,
@@ -27,49 +15,52 @@ export default function SetupPage() {
   } = useSimulationStore();
 
   return (
-    <div className="setup-container">
-      {/* Line 32 with "<C" should be removed if it was an error */}
-      {/* ---- the rest of the JSX remains unchanged ---- */} {/* This comment is fine */}
-      <h1>Robot Task Simulation Setup</h1>
+    <div className="page-container">
+      <div className="main-content">
+        <h1>Robot Task Simulation Setup</h1>
 
-      <GridSelector />
+        <GridSelector />
 
-      {/* Placement Controls */}
-      <div style={{ marginTop: '1rem' }}>
-        <button
-          onClick={() => setPlacementMode('robot')}
-          style={{
-            backgroundColor: currentPlacementMode === 'robot' ? '#add8e6' : '',
-            marginRight: '1rem',
-          }}
-        >
-          Set Robot Placement Mode
-        </button>
-        <button
-          onClick={() => setPlacementMode('task')}
-          style={{
-            backgroundColor: currentPlacementMode === 'task' ? '#ffd580' : '',
-            marginRight: '1rem',
-          }}
-        >
-          Set Task Placement Mode
-        </button>
-        <button onClick={() => setPlacementMode(null)}>
-          Clear Placement Mode
-        </button>
+        {/* Placement Controls */}
+        <div style={{ marginTop: '1rem' }}>
+          <button
+            onClick={() => setPlacementMode('robot')}
+            style={{
+              backgroundColor: currentPlacementMode === 'robot' ? '#add8e6' : '',
+              marginRight: '1rem',
+            }}
+          >
+            Set Robot Placement Mode
+          </button>
+          <button
+            onClick={() => setPlacementMode('task')}
+            style={{
+              backgroundColor: currentPlacementMode === 'task' ? '#ffd580' : '',
+              marginRight: '1rem',
+            }}
+          >
+            Set Task Placement Mode
+          </button>
+          <button onClick={() => setPlacementMode(null)}>
+            Clear Placement Mode
+          </button>
+        </div>
+
+        {/* Strategy Selector */}
+        <StrategySelector />
+        <ControlPanel />
+
+        {/* Grid Display */}
+        <div style={{ marginTop: '2rem' }}>
+          {selectedGridLayout ? (
+            <GridDisplay layout={selectedGridLayout} robots={robots} tasks={tasks} />
+          ) : (
+            <p>Please select a grid to begin simulation.</p>
+          )}
+        </div>
       </div>
-
-      {/* Strategy Selector */}
-      <StrategySelector />
-      <ControlPanel /> {/* This is where you correctly added it */}
-
-      {/* Grid Display */}
-      <div style={{ marginTop: '2rem' }}>
-        {selectedGridLayout ? (
-          <GridDisplay layout={selectedGridLayout} robots={robots} tasks={tasks} />
-        ) : (
-          <p>Please select a grid to begin simulation.</p>
-        )}
+      <div className="sidebar-content">
+        <InfoPanel />
       </div>
     </div>
   );

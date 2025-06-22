@@ -69,3 +69,182 @@ html, body, #root {
   margin: 0;
   overflow: hidden;           /* never show page scrollbars */
 }
+
+/* --- PREVIOUS STYLES FOR VISUALS AND ANIMATION --- */
+
+.grid-container {
+  position: relative;
+  display: inline-block;
+  margin-top: 1rem;
+}
+
+.grid-background {
+  /* This is just a container for the cells, no special positioning needed. */
+}
+
+.item-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.low-battery-indicator {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  background-color: red;
+  border-radius: 50%;
+  border: 1px solid white;
+  z-index: 15;
+}
+
+.task-icon {
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  background-color: #3498db;
+  border: 2px solid white;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-icon::after {
+  content: '';
+  width: 40%;
+  height: 40%;
+  background-color: white;
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.task-icon.in-progress {
+  animation: spin 1s linear infinite;
+  background-color: #f39c12;
+}
+
+/* --- NEW STYLES FOR INFO PANEL --- */
+
+.page-container {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.main-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.sidebar-content {
+  width: 350px;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.info-panel {
+  background-color: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  height: calc(100vh - 2rem);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.info-panel h2 {
+  margin-top: 0;
+  text-align: center;
+  border-bottom: 1px solid #444;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.info-panel ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.robot-info-card {
+  display: flex;
+  align-items: center;
+  background-color: #3a3a3a;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.robot-info-icon {
+  width: 40px;
+  height: 40px;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.robot-info-icon img {
+  width: 100%;
+  height: 100%;
+}
+
+.robot-info-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  font-size: 0.9em;
+}
+
+.robot-id, .robot-status, .robot-target {
+  color: #ccc;
+}
+
+.robot-id {
+  font-weight: bold;
+  font-family: monospace;
+  color: #eee;
+}
+
+.robot-battery-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.battery-bar-container {
+  flex-grow: 1;
+  height: 10px;
+  background-color: #555;
+  border-radius: 5px;
+  overflow: hidden; /* Ensures the inner bar respects the radius */
+}
+
+.battery-bar-level {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.4s ease-in-out, background-color 0.4s ease-in-out;
+}

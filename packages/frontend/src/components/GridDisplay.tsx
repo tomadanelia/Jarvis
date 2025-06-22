@@ -1,25 +1,22 @@
 import React from 'react';
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
-import {  placeRobotApi, placeTaskApi } from '../services/apiService';
+import { placeRobotApi, placeTaskApi } from '../services/apiService';
 import SimulationStatusDisplay from './SimulationStatusDisplay';
 
-/**
- * List of available robot icons.
- * These paths are relative to the `public` directory, so they are served from the root.
- */
 const ROBOT_ICONS = [
   '/assets/robots/robot1.png',
   '/assets/robots/robot2.png',
   '/assets/robots/robot3.png',
   '/assets/robots/robot4.png',
   '/assets/robots/robot5.png',
-  '/assets/robots/robot3.png',
 ];
 
-/**
- * Props for GridDisplay component.
- */
+// Use a precise cell size that includes the border for accurate calculations.
+// A cell with width/height 18px and a 1px border on all sides will work well.
+const CELL_SIZE = 18;
+const LOW_BATTERY_THRESHOLD = 20;
+
 interface GridDisplayProps {
   layout: Cell[][];
   robots: Robot[];
@@ -27,96 +24,129 @@ interface GridDisplayProps {
 }
 
 /**
- * A React component to visually render a simulation grid layout,
- * including cells, robots, and tasks. Also handles click interactions
- * for placing robots or tasks.
- *
- * @param layout - 2D grid layout of Cell objects.
- * @param robots - List of robots currently on the grid.
- * @param tasks - List of tasks currently on the grid.
+ * Renders a single robot, handling its position, animation, and low-battery indicator.
  */
+const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
+  const isLowBattery = robot.battery < LOW_BATTERY_THRESHOLD;
+  const style: React.CSSProperties = {
+    position: 'absolute',
+    top: `${robot.currentLocation.y * CELL_SIZE}px`,
+    left: `${robot.currentLocation.x * CELL_SIZE}px`,
+    width: `${CELL_SIZE}px`,
+    height: `${CELL_SIZE}px`,
+    transition: 'top 0.4s ease-in-out, left 0.4s ease-in-out',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10 // Ensure robots are on top of tasks
+  };
+
+  return (
+    <div style={style}>
+      <img
+        src={robot.iconType}
+        alt="robot"
+        style={{ width: '90%', height: '90%', objectFit: 'contain' }}
+      />
+      {isLowBattery && <div className="low-battery-indicator" />}
+    </div>
+  );
+};
+
+/**
+ * Renders a single task, handling its visual style and "in-progress" animation.
+ */
+const TaskVisual: React.FC<{ task: Task }> = ({ task }) => {
+  const style: React.CSSProperties = {
+    position: 'absolute',
+    top: `${task.location.y * CELL_SIZE}px`,
+    left: `${task.location.x * CELL_SIZE}px`,
+    width: `${CELL_SIZE}px`,
+    height: `${CELL_SIZE}px`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5 // Ensure tasks are below robots
+  };
+
+  const isWorking = task.status === 'inProgress';
+
+  return (
+    <div style={style}>
+      <div className={`task-icon ${isWorking ? 'in-progress' : ''}`} />
+    </div>
+  );
+};
+
 const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
-  const {
-    currentPlacementMode,
-    selectedGridId,
-  } = useSimulationStore();
+  const { currentPlacementMode, selectedGridId } = useSimulationStore();
+  const allRobots = useSimulationStore(state => state.robots);
 
-  /**
-   * Fetches updated simulation state from backend and updates store.
-   * this is no longer used but i will keep it alive for now
-   */
-
-
-
-  /**
-   * Handles clicking on a grid cell based on the current placement mode.
-   * @param x - X coordinate of the clicked cell.
-   * @param y - Y coordinate of the clicked cell.
-   */
   const handleCellClick = async (x: number, y: number) => {
     if (!currentPlacementMode || !selectedGridId) return;
-
     try {
       const coordinates = { x, y };
-
       if (currentPlacementMode === 'robot') {
-        // Cycle through the available icons based on the number of robots already on the grid.
-        const nextIcon = ROBOT_ICONS[robots.length % ROBOT_ICONS.length];
+        const nextIcon = ROBOT_ICONS[allRobots.length % ROBOT_ICONS.length];
         await placeRobotApi({ currentLocation: coordinates, iconType: nextIcon } as Robot);
-
       } else if (currentPlacementMode === 'task') {
-        await placeTaskApi({ location: coordinates } as Task); // Cast for type, apiService extracts
-
+        await placeTaskApi({ location: coordinates } as Task);
       }
-
     } catch (err) {
       console.error('Failed to place item:', err);
     }
   };
 
   return (
-    <div style={{ display: 'inline-block' }}>
-      <SimulationStatusDisplay/>
-      {layout.map((row, y) => (
-        <div key={y} style={{ display: 'flex' }}>
-          {row.map((cell, x) => {
-            let bgColor = '#eee';
-            if (cell.type === 'walkable') bgColor = '#ccc';
-            else if (cell.type === 'wall') bgColor = '#333';
-            else if (cell.type === 'chargingStation') bgColor = 'gold';
+    // This outer div now correctly separates the StatusDisplay from the grid system.
+    <div>
+      <SimulationStatusDisplay />
 
-            const robot = robots.find(r => r.currentLocation.x === x && r.currentLocation.y === y);
-            const task = tasks.find(t => t.location.x === x && t.location.y === y);
+      {/* This is the key: a dedicated relative container for the grid and its layers. */}
+      <div className="grid-container">
+        {/* Layer 1: The static grid background */}
+        <div className="grid-background">
+          {layout.map((row, y) => (
+            <div key={`row-${y}`} style={{ display: 'flex' }}>
+              {row.map((cell, x) => {
+                let bgColor = '#eee';
+                if (cell.type === 'walkable') bgColor = '#ccc';
+                else if (cell.type === 'wall') bgColor = '#333';
+                else if (cell.type === 'chargingStation') bgColor = 'gold';
 
-            return (
-              <div
-                key={x}
-                onClick={() => handleCellClick(x, y)}
-                style={{
-                  width: 17,
-                  height: 17,
-                  backgroundColor: bgColor,
-                  border: '1px solid #999',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: currentPlacementMode ? 'pointer' : 'default',
-                }}
-              >
-                {robot ? (
-                  <img
-                    src={robot.iconType}
-                    alt="robot"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                return (
+                  <div
+                    key={`cell-${x}-${y}`}
+                    onClick={() => handleCellClick(x, y)}
+                    style={{
+                      width: `${CELL_SIZE}px`,
+                      height: `${CELL_SIZE}px`,
+                      backgroundColor: bgColor,
+                      boxSizing: 'border-box',
+                      border: '1px solid #999',
+                      cursor: currentPlacementMode ? 'pointer' : 'default',
+                    }}
                   />
-                ) : task ? (
-                  '📦'
-                ) : ('')}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          ))}
         </div>
-      ))}
+
+        {/* Layer 2: Tasks (Absolutely positioned relative to grid-container) */}
+        <div className="item-layer">
+          {tasks.map(task => (
+            <TaskVisual key={task.id} task={task} />
+          ))}
+        </div>
+
+        {/* Layer 3: Robots (Absolutely positioned relative to grid-container) */}
+        <div className="item-layer">
+          {robots.map(robot => (
+            <RobotVisual key={robot.id} robot={robot} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
