@@ -2,7 +2,7 @@ import { simulationStateService, SimulationStateService } from "./simulationStat
 import { PathfindingService, pathfindingService } from "./pathfindingService";
 import { BASE_SIMULATION_STEP_INTERVAL_MS, CHARGING_DURATION_STEPS, DEFAULT_SIMULATION_SPEED_FACTOR, LOW_BATTERY_THRESHOLD, ROBOT_MAX_CONSECUTIVE_WAIT_STEPS_FOR_REPATH } from "../config/constants";
 import { moveRobotOneStep } from "./robotService";
-import { Coordinates, Robot, Task } from "@common/types";
+import { Cell, Coordinates, Robot, Task } from "@common/types";
 import { taskAssignmentService, TaskAssignmentService } from "./taskAssignmentService";
 import { webSocketManager } from './webSocketManager';
 
@@ -307,37 +307,109 @@ private executeApprovedMovements(approvedRobotIds: Set<string>): void {
 
 private handleRepathForWaitingRobot(robotId: string): void {
     const robot = this.simulationStateService.getRobotById(robotId);
-    if (!robot || !robot.currentTarget) { 
-        this.simulationStateService.updateRobotState(robotId, { status: 'idle', currentPath: undefined, currentTarget: undefined, consecutiveWaitSteps: 0 });
+    const originalGrid = this.simulationStateService.getCurrentGrid(); 
+
+    if (!robot || !robot.currentTarget || !originalGrid) {
+        console.warn(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} cannot re-path (no robot, target, or grid). Setting to idle.`);
+        if (robotId) {
+            this.simulationStateService.updateRobotState(robotId, {
+                status: 'idle',
+                currentPath: undefined,
+                currentTarget: undefined,
+                assignedTaskId: undefined,
+                consecutiveWaitSteps: 0
+            });
+            if (robot && robot.status === 'onTaskWay' && robot.assignedTaskId) {
+                this.simulationStateService.updateTaskState(robot.assignedTaskId, { status: 'unassigned' });
+            }
+        }
         return;
     }
 
-    const grid = this.simulationStateService.getCurrentGrid();
-    if (!grid) return;
-    const newPath = this.pathfindingService.findPath(grid, robot.currentLocation, robot.currentTarget);
+    console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} attempting re-path from (${robot.currentLocation.x},${robot.currentLocation.y}) to target (${robot.currentTarget.x},${robot.currentTarget.y}).`);
+
+    let problematicCellToBlockTemporarily: Coordinates | null = null;
+    if (robot.currentPath && robot.currentPath.length > 0) {
+        problematicCellToBlockTemporarily = robot.currentPath[0];
+        console.log(`SIM_ENGINE_REPATH: Assuming problematic cell for ${robotId} is next step: (${problematicCellToBlockTemporarily.x},${problematicCellToBlockTemporarily.y})`);
+    } else {
+        console.log(`SIM_ENGINE_REPATH: Robot ${robotId} has no current path segment to identify a specific problematic cell. Trying standard re-path.`);
+    }
+
+   
+    const tempGrid: Cell[][] = originalGrid.map(row =>
+        row.map(cell => ({ ...cell, coordinates: { ...cell.coordinates } }))
+    );
+
+    
+    if (problematicCellToBlockTemporarily) {
+        const { x: probX, y: probY } = problematicCellToBlockTemporarily;
+        if (probY >= 0 && probY < tempGrid.length &&
+            probX >= 0 && probX < tempGrid[0].length) {
+
+            if (!(probX === robot.currentLocation.x && probY === robot.currentLocation.y) &&
+                !(probX === robot.currentTarget.x && probY === robot.currentTarget.y)) {
+                console.log(`SIM_ENGINE_REPATH: Temporarily marking cell (${probX},${probY}) as 'wall' in temp grid for robot ${robotId}'s re-path.`);
+                tempGrid[probY][probX] = { ...tempGrid[probY][probX], type: 'wall' };
+            } else {
+                 console.log(`SIM_ENGINE_REPATH: Problematic cell (${probX},${probY}) is robot's current location or target. Not blocking it for re-path.`);
+            }
+        } else {
+            console.warn(`SIM_ENGINE_REPATH: Identified problematic cell (${probX},${probY}) is out of bounds for temp grid. Proceeding without temporary block.`);
+        }
+    }
+
+    let newPath: Coordinates[] = [];
+    try {
+        const gridToUseForPathfinding = problematicCellToBlockTemporarily ? tempGrid : originalGrid;
+        newPath = this.pathfindingService.findPath(
+            gridToUseForPathfinding,
+            robot.currentLocation,
+            robot.currentTarget
+        );
+    } catch (e) {
+        console.error(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Error during pathfinding for ${robotId}:`, e);
+        newPath = [];
+    }
 
     if (newPath && newPath.length > 0) {
-        console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} found new path to ${robot.currentTarget.x},${robot.currentTarget.y}.`);
-        this.simulationStateService.updateRobotState(robotId, {
-            currentPath: newPath,
-            consecutiveWaitSteps: 0, 
-        });
-    } else {
-        console.warn(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} failed to find new path to ${robot.currentTarget.x},${robot.currentTarget.y}. Setting to idle.`);
-        const originalStatus = robot.status;
-        const assignedTaskId = robot.assignedTaskId;
-
-        this.simulationStateService.updateRobotState(robotId, {
-            status: 'idle',
-            currentPath: undefined,
-            currentTarget: undefined, 
-            assignedTaskId: undefined, 
-            consecutiveWaitSteps: 0,
-        });
-        if (originalStatus === 'onTaskWay' && assignedTaskId) {
-            this.simulationStateService.updateTaskState(assignedTaskId, { status: 'unassigned' });
-            console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Task ${assignedTaskId} unassigned due to robot ${robotId} re-path failure.`);
+        let isIdenticalToOldPath = false;
+        if (robot.currentPath && problematicCellToBlockTemporarily) { // Only checking identical if actually tried to block something
+            if (newPath.length === robot.currentPath.length) {
+                isIdenticalToOldPath = newPath.every((coord, index) =>
+                    coord.x === robot.currentPath![index].x && coord.y === robot.currentPath![index].y
+                );
+            }
         }
+
+        if (isIdenticalToOldPath) {
+            console.warn(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} re-path resulted in the SAME path despite temporary block. Setting to idle to break potential loop.`);
+            this.setRobotToIdleAndUnassignTask(robotId, robot.status, robot.assignedTaskId);
+        } else {
+            console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} found a NEW path (length ${newPath.length}) to target (${robot.currentTarget.x},${robot.currentTarget.y}).`);
+            this.simulationStateService.updateRobotState(robotId, {
+                currentPath: newPath,
+                consecutiveWaitSteps: 0,
+            });
+        }
+    } else {
+        console.warn(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} failed to find ANY new path to target (${robot.currentTarget.x},${robot.currentTarget.y}). Setting to idle.`);
+        this.setRobotToIdleAndUnassignTask(robotId, robot.status, robot.assignedTaskId);
+    }
+}
+
+// Helper to avoid repetition for setting robot to idle and unassigning task
+private setRobotToIdleAndUnassignTask(robotId: string, originalStatus?: string, assignedTaskId?: string): void {
+    this.simulationStateService.updateRobotState(robotId, {
+        status: 'idle',
+        currentPath: undefined,
+        currentTarget: undefined,
+        assignedTaskId: undefined,
+        consecutiveWaitSteps: 0,
+    });
+    if (originalStatus === 'onTaskWay' && assignedTaskId) {
+        this.simulationStateService.updateTaskState(assignedTaskId, { status: 'unassigned' });
+        console.log(`SIM_ENGINE_TASK_UNASSIGN (Tick ${this.simulationStateService.getSimulationTime()}): Task ${assignedTaskId} unassigned due to robot ${robotId} re-path failure/loop prevention.`);
     }
 }
   
