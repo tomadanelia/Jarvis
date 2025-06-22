@@ -281,9 +281,11 @@ private resolveMovementConflicts(intentions: Map<string, Coordinates | null>): S
  * @returns nothing calls moveRobotOneStep function for every approved robot
  */
 private executeApprovedMovements(approvedRobotIds: Set<string>): void {
-    throw new Error("Unimplemented");
+    for (const robotId of approvedRobotIds) {
+        moveRobotOneStep(robotId);
+       
+    }
 }
-
 /**
  * Attempts to re-calculate and assign a new path for a robot that is currently waiting.
  * 
@@ -302,10 +304,42 @@ private executeApprovedMovements(approvedRobotIds: Set<string>): void {
  * - If a new path is successfully found, the robot resumes movement toward the target.
  * - If pathfinding fails, the robot becomes idle, and the associated task is marked unassigned.
  */
-private handleRepathForWaitingRobot(robotId: string): void {
-    throw new Error("Unimplemented");
-}
 
+private handleRepathForWaitingRobot(robotId: string): void {
+    const robot = this.simulationStateService.getRobotById(robotId);
+    if (!robot || !robot.currentTarget) { 
+        this.simulationStateService.updateRobotState(robotId, { status: 'idle', currentPath: undefined, currentTarget: undefined, consecutiveWaitSteps: 0 });
+        return;
+    }
+
+    const grid = this.simulationStateService.getCurrentGrid();
+    if (!grid) return;
+    const newPath = this.pathfindingService.findPath(grid, robot.currentLocation, robot.currentTarget);
+
+    if (newPath && newPath.length > 0) {
+        console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} found new path to ${robot.currentTarget.x},${robot.currentTarget.y}.`);
+        this.simulationStateService.updateRobotState(robotId, {
+            currentPath: newPath,
+            consecutiveWaitSteps: 0, 
+        });
+    } else {
+        console.warn(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robotId} failed to find new path to ${robot.currentTarget.x},${robot.currentTarget.y}. Setting to idle.`);
+        const originalStatus = robot.status;
+        const assignedTaskId = robot.assignedTaskId;
+
+        this.simulationStateService.updateRobotState(robotId, {
+            status: 'idle',
+            currentPath: undefined,
+            currentTarget: undefined, 
+            assignedTaskId: undefined, 
+            consecutiveWaitSteps: 0,
+        });
+        if (originalStatus === 'onTaskWay' && assignedTaskId) {
+            this.simulationStateService.updateTaskState(assignedTaskId, { status: 'unassigned' });
+            console.log(`SIM_ENGINE_REPATH (Tick ${this.simulationStateService.getSimulationTime()}): Task ${assignedTaskId} unassigned due to robot ${robotId} re-path failure.`);
+        }
+    }
+}
 /**
  * this is called after every movement in step() method and controls robot status path and related things after movement
  * This method will now contain the big switch statement logic that was previously directly in  step() method's loop.
