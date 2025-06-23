@@ -30,7 +30,7 @@ export default function SetupPage() {
               marginRight: '1rem',
             }}
           >
-            Set Robot Placement Mode
+            Place Robots
           </button>
           <button
             onClick={() => setPlacementMode('task')}
@@ -39,11 +39,14 @@ export default function SetupPage() {
               marginRight: '1rem',
             }}
           >
-            Set Task Placement Mode
+            Place Tasks
           </button>
-          <button onClick={() => setPlacementMode(null)}>
-            Clear Placement Mode
-          </button>
+          <button onClick={() => setPlacementMode('delete')}  style={{
+              backgroundColor: currentPlacementMode === 'delete' ? 'pink' : '',
+              marginRight: '1rem',
+            }}>
+            Delete Objects
+           </button>
         </div>
 
         {/* Strategy Selector */}
