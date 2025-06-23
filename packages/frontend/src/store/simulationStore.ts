@@ -27,7 +27,7 @@ interface SimulationEndedPayload {
 }
 
 /** Mode used to determine what is being placed: robot or task. */
-type PlacementMode = 'robot' | 'task' | null;
+type PlacementMode = 'robot' | 'task' | 'delete' | null;
 
 /** Current simulation execution status. */
 // type SimulationStatus = 'idle' | 'running' | 'paused'; // Already defined, matches BackendSimulationStatus
