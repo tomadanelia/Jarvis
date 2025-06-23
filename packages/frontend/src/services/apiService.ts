@@ -91,6 +91,19 @@ export async function placeTaskApi(task: Task): Promise<void> {
   }
 }
 
+
+export async function deleteObjectApi(location:any): Promise<void> {
+   const res = await fetch(`${BASE_URL}/api/simulation/deleteObject`, { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(location), 
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`deleteObject FAILED. Status: ${res.status}. Response text: ${errorText}`);
+    throw new Error(`Deleting task/or ovject failed. Status: ${res.status}. Body: ${errorText}`);
+  }
+}
 /**
  * Select a task assignment strategy for the simulation.
  *

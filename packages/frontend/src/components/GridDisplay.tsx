@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
-import { placeRobotApi, placeTaskApi } from '../services/apiService';
+import { deleteObjectApi, placeRobotApi, placeTaskApi } from '../services/apiService';
 import SimulationStatusDisplay from './SimulationStatusDisplay';
 
 const ROBOT_ICONS = [
@@ -84,6 +84,10 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
       } else if (currentPlacementMode === 'task') {
         await placeTaskApi({ location: coordinates } as Task);
       }
+        else if(currentPlacementMode==='delete'){
+       await deleteObjectApi(coordinates);
+      }
+
     } catch (err) {
       console.error('Failed to place item:', err);
     }

@@ -78,6 +78,49 @@ export const placeTask= async (req:Request,res:Response ):Promise<void>=>{
         res.status(500).json({ error: "Internal server error" });
     }
 }
+
+
+/**
+ * really easy function
+ * @param req location where is object to delete
+ * @param res express response object deleting object depending on llocation and type
+ */
+export const deleteObject= async (req:Request,res:Response):Promise<void>=>{
+  try {
+    const location=req.body
+       if (!location||typeof location.x !== "number" || typeof location.y!=="number" ) {
+      res.status(400).json({ error: "invalid parameters for deleteRobot controler" });
+      return;
+    }
+    const robots=simulationStateService.getRobots();
+    const tasks=simulationStateService.getTasks();
+    let robotFlag: boolean = false;
+let taskFlag: boolean = false;
+
+const robot = robots.find(r => r.initialLocation.x === location.x && r.initialLocation.y === location.y);
+const task = tasks.find(t => t.location.x === location.x && t.location.y === location.y);
+
+if (!robot && !task) {
+  res.status(400).json({ error: "no object on the provided location to delete" });
+  return;
+}
+
+if (robot) {
+  robotFlag = simulationStateService.deleteRobot(robot.id);
+}
+if (task?.id != undefined) {
+  taskFlag = simulationStateService.deleteTask(task.id);
+}
+
+if (!robotFlag && !taskFlag) {
+  res.status(400).json({ error: "Deletion failed" });
+}
+  } catch (error) {
+    res.status(500).json({error:"internal server error"})
+  }
+}
+
+
 /**
  * Selects the simulation strategy ('nearest' or 'round-robin').
  * @param req Express request object (expects strategy in req.body)
