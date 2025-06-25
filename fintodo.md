@@ -258,7 +258,7 @@
 
     ## Phase 7: User Authentication (Simplified) (Est: 4-6 hours)
 
-### Iteration 14: Backend - Supabase Auth & Routes (Est: 2-3 hours)
+### Iteration 14: Backend - Supabase Auth & Routes (Est: 4-7 hours)
 *   **[ ] (Est: 15-30 min) Enable & Configure Supabase Auth**
     *   [ ] In the Supabase Dashboard, go to Authentication -> Providers and enable the "Email" provider.
     *   [ ] Define a new table `user_profiles` to store public user data linked to an authenticated user:
@@ -292,7 +292,7 @@
     *   [ ] In `packages/backend`, create `src/middleware/auth.ts`.
     *   [ ] Implement a middleware function `(req, res, next)` that extracts the JWT from the `Authorization: Bearer <token>` header, verifies it with `supabase.auth.getUser(jwt)`, and attaches the user to the request.
 
-### Iteration 15: Frontend - Auth UI & State Management (Est: 2-3 hours)
+### Iteration 15: Frontend - Auth UI & State Management (Est: 4-6 hours)
 *   **[ ] (Est: 30-60 min) Update Frontend State & API Service**
     *   [ ] In `simulationStore`, add state for `user` and `session`. Add actions for `login`, `signup`, `logout`.
     *   [ ] In `apiService`, implement `login()` and `signup()` functions.
@@ -302,3 +302,4 @@
     *   [ ] Create `LoginPage.tsx` and `SignupPage.tsx` with simple forms to call the `apiService` functions.
     *   [ ] Create a `Navbar.tsx` or similar component that conditionally renders Login/Signup links or a Logout button based on the auth state in the store.
     *   [ ] Set up basic routing in `App.tsx` to handle `/login`, `/signup`, and the main `/` page.
+
