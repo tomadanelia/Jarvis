@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Cell, Robot, Task, SimulationStatus as BackendSimulationStatus } from '../../../common/src/types';
 import type { User, Session } from '@supabase/supabase-js';
 import { logoutApi } from '../services/apiService';
+import { UserSetup as ApiUserSetup } from '../services/apiService';
 
 interface InitialStatePayload {
   currentGrid: Cell[][] | null;
@@ -50,6 +51,7 @@ interface SimulationState {
   // Auth state
   user: User | null;
   session: Session | null;
+  savedSetups: ApiUserSetup[];
 
   setAvailableGrids: (grids: { id: string; name: string }[]) => void;
   setSelectedGrid: (id: string, layout: Cell[][]) => void;
@@ -63,6 +65,7 @@ interface SimulationState {
   clearErrors: () => void;
   setPlacementMode: (mode: PlacementMode) => void;
   setMyClientId: (id: string | null) => void;
+  setSavedSetups: (setups: ApiUserSetup[]) => void;
   handleInitialState: (payload: InitialStatePayload) => void;
   handleSimulationUpdate: (payload: SimulationUpdatePayload) => void;
   handleSimulationEnded: (payload: SimulationEndedPayload) => void;
@@ -87,6 +90,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   // Auth state
   user: null,
   session: null,
+  savedSetups: [],
 
   setAvailableGrids: (grids) => set({ availableGrids: grids }),
   setSelectedGrid: (id, layout) =>
@@ -104,6 +108,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   clearErrors: () => set({ errorMessages: [] }),
   setPlacementMode: (mode) => set({ currentPlacementMode: mode }),
   setMyClientId: (id) => set({ myClientId: id }),
+  setSavedSetups: (setups) => set({ savedSetups: setups }),
 
   // Implement WebSocket payload handlers
   handleInitialState: (payload) => set({
@@ -133,6 +138,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   setAuth: (user, session) => set({ user, session }),
   logout: () => {
     logoutApi(); // Clear token from localStorage
-    set({ user: null, session: null });
+    set({ user: null, session: null, savedSetups: [] });
   },
 }));

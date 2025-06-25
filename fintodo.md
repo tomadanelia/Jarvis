@@ -303,3 +303,25 @@
     *   [ ] Create a `Navbar.tsx` or similar component that conditionally renders Login/Signup links or a Logout button based on the auth state in the store.
     *   [ ] Set up basic routing in `App.tsx` to handle `/login`, `/signup`, and the main `/` page.
 
+### Iteration 16: Backend - Saved Setups Table & API (Est: 2-3 hours)
+*   **[ ] (Est: 30-45 min) Create `user_setups` Table & RLS**
+    *   [ ] In Supabase SQL Editor, create the `user_setups` table.
+    *   [ ] Enable Row Level Security (RLS) on the table.
+    *   [ ] Create RLS policies to ensure users can only access their own setups.
+*   **[ ] (Est: 1.5-2.5 hours) Implement `setups` API Endpoints**
+    *   [ ] Create `setupsController.ts` and `setupsRoutes.ts`.
+    *   [ ] Apply the JWT auth middleware to protect all setup routes.
+    *   [ ] `POST /api/setups`: Saves the current simulation configuration.
+    *   [ ] `GET /api/setups`: Fetches all saved setups for the authenticated user.
+    *   [ ] `POST /api/setups/load/:id`: Loads a specific setup into the simulation state.
+    *   [ ] `DELETE /api/setups/:id`: Deletes a saved setup.
+    *   [ ] Update `SupabaseService` with methods to interact with the `user_setups` table.
+
+### Iteration 17: Frontend - Save/Load UI & Logic (Est: 1.5-2.5 hours)
+*   **[ ] (Est: 30-60 min) Update `apiService.ts` and `simulationStore.ts`**
+    *   [ ] Add functions to `apiService.ts` for saving, getting, loading, and deleting setups.
+    *   [ ] Add state to `simulationStore.ts` to hold the list of the user's saved setups.
+*   **[ ] (Est: 1-1.5 hours) Implement Save/Load Components**
+    *   [ ] On the `SetupPage`, add a "Save Setup" button (visible only if logged in) that prompts for a name and calls the API.
+    *   [ ] On the `SetupPage`, add a "My Setups" dropdown (visible only if logged in) that is populated with the user's saved setups.
+    *   [ ] Add an `onChange` handler to the dropdown to call the load setup API.

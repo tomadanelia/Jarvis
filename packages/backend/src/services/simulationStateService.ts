@@ -291,7 +291,8 @@ public deleteTask(id: string): boolean {
         console.log("SIM_STATE_SERVICE: Resetting simulation setup.");
         this.robots.forEach(robot => {
             
-            robot.currentLocation=robot.initialLocation;
+            // FIX: Ensure currentLocation is a new object, not a reference to initialLocation.
+            robot.currentLocation = { ...robot.initialLocation }; 
             robot.battery = robot.maxBattery; // Full battery
             robot.status = 'idle';
             robot.assignedTaskId = undefined;

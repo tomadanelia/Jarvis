@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { supabaseService } from '../services/supabaseService';
 import { simulationStateService } from '../services/simulationStateService';
+import { Robot, Task } from '@common/types';
+import { INITIAL_CONSECUTIVE_WAIT_STEPS } from '../config/constants';
 
 /**
  * Extracts the JWT from the Authorization header.
@@ -60,21 +62,49 @@ export const saveCurrentSetup = async (req: Request, res: Response): Promise<voi
         return;
     }
 
-    const robots = simulationStateService.getRobots();
-    const tasks = simulationStateService.getTasks();
+    const currentRobots = simulationStateService.getRobots();
+    const currentTasks = simulationStateService.getTasks();
     const strategy = simulationStateService.getSelectedStrategy();
+
+    // --- DEFINITIVE FIX: Build the save payload from a whitelist of properties ---
+    // This creates clean objects with only the necessary "setup" data.
+    const robotsForSave: Robot[] = currentRobots.map(robot => ({
+        id: robot.id,
+        iconType: robot.iconType,
+        initialLocation: { ...robot.initialLocation },
+        currentLocation: { ...robot.initialLocation }, // A setup always starts at the initial location
+        battery: robot.maxBattery,
+        maxBattery: robot.maxBattery,
+        movementCostPerCell: robot.movementCostPerCell,
+        status: 'idle',
+        assignedTaskId: undefined,
+        currentTarget: undefined,
+        currentPath: undefined,
+        workProgress: undefined,
+        consecutiveWaitSteps: INITIAL_CONSECUTIVE_WAIT_STEPS,
+        waitingBecauseOfRobotId: undefined,
+    }));
+
+    const tasksForSave: Task[] = currentTasks.map(task => ({
+        id: task.id,
+        location: { ...task.location },
+        status: 'unassigned', // A setup always starts with unassigned tasks
+        workDuration: task.workDuration,
+        batteryCostToPerform: task.batteryCostToPerform,
+    }));
+    // --- End of DEFINITIVE FIX ---
 
     try {
         const newSetup = await supabaseService.createSetup(token, userId, {
             name,
             grid_id,
-            robots,
-            tasks,
+            robots: robotsForSave, // Use the sanitized data
+            tasks: tasksForSave,   // Use the sanitized data
             strategy,
         });
         res.status(201).json(newSetup);
     } catch (error: any) {
-        console.error('Error creating setup:', error.message);
+        console.error('Error creating setup:', error.message, error.stack); // Added stack for more debug info
         if (error.code === '23505') {
             res.status(409).json({ error: 'A setup with this name already exists.' });
         } else {

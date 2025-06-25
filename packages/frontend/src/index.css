@@ -407,3 +407,67 @@ html, body, #root {
 h2{
   color: white;
 }
+
+.top-controls-container {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 1200px;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.setups-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #2d2d2d;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+.setups-controls label {
+  margin-right: 0.5rem;
+}
+
+.setups-controls select, .setups-controls button {
+  font-size: 0.9em;
+  padding: 0.5em 1em;
+}
+
+.delete-button {
+  background-color: #c0392b !important;
+  border-color: #c0392b !important;
+}
+.delete-button:hover {
+  background-color: #e74c3c !important;
+}
+
+.placement-controls-container {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.placement-controls-container button {
+  margin: 0 0.25rem;
+}
+
+.placement-controls-container button.active-placement {
+  border-color: #fff;
+  box-shadow: 0 0 5px #fff;
+}
+
+.save-button {
+  background-color: #27ae60 !important;
+  border-color: #27ae60 !important;
+}
+.save-button:hover {
+  background-color: #2ecc71 !important;
+}

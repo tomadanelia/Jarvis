@@ -9,6 +9,16 @@ const BASE_URL = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '') || 'http:/
 const AUTH_TOKEN_KEY = 'supabase.auth.token';
 
 /**
+ * Represents the data structure for a user's saved setup, as returned by the API.
+ */
+export interface UserSetup {
+  id: string;
+  name: string;
+  grid_id: string;
+  created_at: string;
+}
+
+/**
  * Creates authorization headers if a token is available in localStorage.
  * @returns {HeadersInit} A Headers object with Content-Type and optionally Authorization.
  */
@@ -293,5 +303,73 @@ export async function setSpeedFactorControlApi(factor: number): Promise<void> {
   if (!res.ok) {
     const errorBody = await res.text();
     throw new Error(`Setting speed factor failed. Status: ${res.status}. Message: ${errorBody}`);
+  }
+}
+
+// --- User Setups APIs ---
+
+/**
+ * Fetches all saved setups for the authenticated user.
+ * @returns {Promise<UserSetup[]>} A promise resolving to an array of the user's setups.
+ */
+export async function getUserSetupsApi(): Promise<UserSetup[]> {
+  const res = await fetch(`${BASE_URL}/api/setups`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Failed to get user setups. Status: ${res.status}. Message: ${errorBody}`);
+  }
+  return res.json();
+}
+
+/**
+ * Saves the current simulation configuration as a named setup.
+ * @param {string} name - The name for the new setup.
+ * @returns {Promise<any>} The newly created setup object.
+ */
+export async function saveSetupApi(name: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/setups`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json(); // Expects JSON error from backend
+    throw new Error(errorBody.error || `Failed to save setup. Status: ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * Loads a saved setup into the backend's active simulation state.
+ * @param {string} setupId - The ID of the setup to load.
+ * @returns {Promise<void>}
+ */
+export async function loadSetupApi(setupId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/setups/load/${setupId}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Failed to load setup. Status: ${res.status}. Message: ${errorBody}`);
+  }
+}
+
+/**
+ * Deletes a saved setup.
+ * @param {string} setupId - The ID of the setup to delete.
+ * @returns {Promise<void>}
+ */
+export async function deleteSetupApi(setupId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/setups/${setupId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Failed to delete setup. Status: ${res.status}. Message: ${errorBody}`);
   }
 }
