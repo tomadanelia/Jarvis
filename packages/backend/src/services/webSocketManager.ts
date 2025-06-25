@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { SimulationStateService } from './simulationStateService';
+import type { SimulationStateService } from './simulationStateService';
 
 /**
  * Centralized wrapper around Socket.IO.

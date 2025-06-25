@@ -9,17 +9,19 @@ import { supabaseApiPublicClient } from '../config/supabaseClient';
  * @param res Express response object.
  * @param next Express next function.
  */
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: No token provided.' });
+    res.status(401).json({ error: 'Unauthorized: No token provided.' });
+    return;
   }
 
   const token = authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized: Malformed token.' });
+    res.status(401).json({ error: 'Unauthorized: Malformed token.' });
+    return;
   }
 
   try {
@@ -27,7 +29,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     if (error || !user) {
       console.warn('JWT validation error:', error?.message);
-      return res.status(401).json({ error: 'Unauthorized: Invalid token.' });
+      res.status(401).json({ error: 'Unauthorized: Invalid token.' });
+      return;
     }
 
     // Attach user to the request object for use in subsequent handlers
@@ -35,6 +38,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     next();
   } catch (err) {
     console.error('Unexpected error in auth middleware:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    res.status(500).json({ error: 'Internal server error.' });
+    return;
   }
 };

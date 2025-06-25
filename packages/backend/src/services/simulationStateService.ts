@@ -20,6 +20,7 @@ import {
     DEFAULT_BATTERY_COST_TO_PERFORM_TASK,
     // Add any other relevant constants you might need
 } from '../config/constants'; // Adjust path as needed
+import { UserSetup } from './supabaseService';
 
 
 
@@ -67,6 +68,34 @@ export class SimulationStateService {
         
     }
 
+    /**
+     * Loads a complete setup, replacing the current simulation state.
+     * @param setup - The UserSetup object from the database.
+     * @param gridLayout - The full layout of the grid associated with the setup.
+     * @param gridName - The name of the grid associated with the setup.
+     */
+    public loadFromSetup(setup: UserSetup, gridLayout: Cell[][], gridName: string): void {
+        console.log(`SIM_STATE_SERVICE: Loading setup "${setup.name}" (ID: ${setup.id})`);
+
+        this.currentGridId = setup.grid_id;
+        this.currentGridName = gridName;
+        this.currentGrid = gridLayout;
+
+        // Deep copy is not strictly necessary if we don't mutate them, but it's safer.
+        this.robots = setup.robots ? setup.robots.map(r => ({ ...r })) : [];
+        this.tasks = setup.tasks ? setup.tasks.map(t => ({ ...t })) : [];
+
+        this.chargingStations = [];
+        this.findChargingStationCells();
+        
+        this.selectedStrategy = (setup.strategy as SimulationStrategy) || null;
+        this.simulationStatus = 'idle';
+        this.simulationTime = 0;
+
+        console.log(`SIM_STATE_SERVICE: Loaded ${this.robots.length} robots and ${this.tasks.length} tasks. Broadcasting new state.`);
+        webSocketManager.broadcastInitialStateToAll();
+    }
+
     public getCurrentGrid(): Cell[][] | null {
         return this.currentGrid;
     }
@@ -83,6 +112,7 @@ export class SimulationStateService {
             console.warn("SIM_STATE_SERVICE: No grid loaded to find charging stations.");
             return;
         }
+        this.chargingStations = []; // Clear previous stations before finding new ones
         this.currentGrid.forEach((row, y) => {
             row.forEach((cell, x) => {
                 if (cell.type === 'chargingStation') {
