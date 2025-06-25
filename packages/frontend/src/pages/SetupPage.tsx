@@ -3,7 +3,7 @@ import GridDisplay from '../components/GridDisplay';
 import { useSimulationStore } from '../store/simulationStore';
 import StrategySelector from '../components/StrategySelector';
 import ControlPanel from '../components/ControlPanel';
-import InfoPanel from '../components/InfoPanel'; // Import the new component
+import InfoPanel from '../components/InfoPanel';
 
 export default function SetupPage() {
   const {

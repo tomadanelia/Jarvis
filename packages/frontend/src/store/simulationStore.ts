@@ -1,6 +1,7 @@
-// packages/frontend/src/store/simulationStore.ts
 import { create } from 'zustand';
 import type { Cell, Robot, Task, SimulationStatus as BackendSimulationStatus } from '../../../common/src/types';
+import type { User, Session } from '@supabase/supabase-js';
+import { logoutApi } from '../services/apiService';
 
 interface InitialStatePayload {
   currentGrid: Cell[][] | null;
@@ -29,9 +30,6 @@ interface SimulationEndedPayload {
 /** Mode used to determine what is being placed: robot or task. */
 type PlacementMode = 'robot' | 'task' | 'delete' | null;
 
-/** Current simulation execution status. */
-// type SimulationStatus = 'idle' | 'running' | 'paused'; // Already defined, matches BackendSimulationStatus
-
 /**
  * Zustand store state and actions for managing simulation UI and logic.
  */
@@ -43,12 +41,15 @@ interface SimulationState {
   robots: Robot[];
   tasks: Task[];
   selectedStrategy: string | null;
-  simulationStatus: BackendSimulationStatus; // Use the common type
-  simulationTime: number; // Add simulation time
+  simulationStatus: BackendSimulationStatus;
+  simulationTime: number;
   errorMessages: string[];
   currentPlacementMode: PlacementMode;
-  myClientId: string | null; // For the client's own socket ID
-  controllerClientId: string | null; // For the current simulation controller's ID
+  myClientId: string | null;
+  controllerClientId: string | null;
+  // Auth state
+  user: User | null;
+  session: Session | null;
 
   setAvailableGrids: (grids: { id: string; name: string }[]) => void;
   setSelectedGrid: (id: string, layout: Cell[][]) => void;
@@ -61,10 +62,13 @@ interface SimulationState {
   addError: (msg: string) => void;
   clearErrors: () => void;
   setPlacementMode: (mode: PlacementMode) => void;
-  setMyClientId: (id: string | null) => void; // Action to set client's ID
+  setMyClientId: (id: string | null) => void;
   handleInitialState: (payload: InitialStatePayload) => void;
   handleSimulationUpdate: (payload: SimulationUpdatePayload) => void;
   handleSimulationEnded: (payload: SimulationEndedPayload) => void;
+  // Auth actions
+  setAuth: (user: User, session: Session) => void;
+  logout: () => void;
 }
 
 export const useSimulationStore = create<SimulationState>((set) => ({
@@ -75,20 +79,23 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   tasks: [],
   selectedStrategy: null,
   simulationStatus: 'idle',
-  simulationTime: 0, // Initialize simulation time
+  simulationTime: 0,
   errorMessages: [],
   currentPlacementMode: null,
   myClientId: null,
   controllerClientId: null,
+  // Auth state
+  user: null,
+  session: null,
 
   setAvailableGrids: (grids) => set({ availableGrids: grids }),
   setSelectedGrid: (id, layout) =>
-    set({ selectedGridId: id, selectedGridLayout: layout, robots: [], tasks: [], simulationTime: 0, simulationStatus: 'idle' }), // Reset items when grid changes
+    set({ selectedGridId: id, selectedGridLayout: layout, robots: [], tasks: [], simulationTime: 0, simulationStatus: 'idle' }),
   setRobots: (robots) => set({ robots }),
   setTasks: (tasks) => set({ tasks }),
-  addRobot: (robot) => // This might be superseded by full state updates via WS
+  addRobot: (robot) =>
     set((state) => ({ robots: [...state.robots, robot] })),
-  addTask: (task) => // This might be superseded by full state updates via WS
+  addTask: (task) =>
     set((state) => ({ tasks: [...state.tasks, task] })),
   setStrategy: (strategy) => set({ selectedStrategy: strategy }),
   setSimulationStatus: (status) => set({ simulationStatus: status }),
@@ -102,8 +109,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   handleInitialState: (payload) => set({
     selectedGridLayout: payload.currentGrid,
     selectedGridId: payload.gridId,
-    // availableGrids: ? - initial_state might not send all available, only the current one.
-    // gridName might be useful to store if you display it.
     robots: payload.robots,
     tasks: payload.tasks,
     selectedStrategy: payload.selectedStrategy,
@@ -116,12 +121,18 @@ export const useSimulationStore = create<SimulationState>((set) => ({
     tasks: payload.tasks,
     simulationTime: payload.simulationTime,
     controllerClientId: payload.controllerClientId,
-    simulationStatus: 'running', // Implicitly, if we get an update, it's running or paused but driven by the update
+    simulationStatus: 'running',
   }),
   handleSimulationEnded: (payload) => set({
-    simulationStatus: 'idle', // Or perhaps 'ended' if you add that status
+    simulationStatus: 'idle',
     simulationTime: payload.simulationTime,
-    // Potentially clear robots/tasks or leave them in their final state
     controllerClientId: payload.controllerClientId,
   }),
+  
+  // Auth actions
+  setAuth: (user, session) => set({ user, session }),
+  logout: () => {
+    logoutApi(); // Clear token from localStorage
+    set({ user: null, session: null });
+  },
 }));

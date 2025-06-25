@@ -1,10 +1,84 @@
-import type { Task, Robot, Cell, SimulationStatus } from '../../../common/src/types';
+import type { Task, Robot, Cell, SimulationStatus, UserCredentials } from '../../../common/src/types';
+import type { AuthResponse } from '@supabase/supabase-js';
 
 /**
  * Base URL for backend API calls.
  * Reads from environment variable and removes trailing slash if present.
  */
 const BASE_URL = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '') || 'http://localhost:3001';
+const AUTH_TOKEN_KEY = 'supabase.auth.token';
+
+/**
+ * Creates authorization headers if a token is available in localStorage.
+ * @returns {HeadersInit} A Headers object with Content-Type and optionally Authorization.
+ */
+const getAuthHeaders = (): HeadersInit => {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+
+// --- Authentication APIs ---
+
+/**
+ * Sends signup credentials to the backend.
+ * @param {UserCredentials} credentials - The user's email and password.
+ * @returns {Promise<AuthResponse>} The response from the backend.
+ */
+export async function signupApi(credentials: UserCredentials): Promise<AuthResponse> {
+  const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body.error || 'Signup failed');
+  }
+  // FIX: Wrap the successful response to match the AuthResponse type.
+  return { data: body, error: null };
+}
+
+/**
+ * Sends login credentials to the backend and stores the JWT on success.
+ * @param {UserCredentials} credentials - The user's email and password.
+ * @returns {Promise<AuthResponse>} The response from the backend.
+ */
+export async function loginApi(credentials: UserCredentials): Promise<AuthResponse> {
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  const body = await res.json();
+  
+  if (!res.ok) {
+    throw new Error(body.error || 'Login failed');
+  }
+
+  // On successful login, store the access token from the nested session object
+  if (body.session?.access_token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, body.session.access_token);
+  }
+  
+  // FIX: Wrap the successful response to match the AuthResponse type.
+  return { data: body, error: null };
+}
+
+/**
+ * Logs the user out by removing the token from storage.
+ * Note: Supabase signout should also be called on the client, this is for local state.
+ */
+export function logoutApi() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+
+// --- Grid APIs ---
 
 /**
  * Fetch the list of available grids from the backend.
@@ -34,6 +108,9 @@ export async function fetchGridById(id: string): Promise<any> {
   }
   return res.json();
 }
+
+// --- Simulation Setup APIs ---
+
 /**
  * Setup the simulation with a given grid ID.
  *
@@ -44,7 +121,7 @@ export async function fetchGridById(id: string): Promise<any> {
 export async function setupSimulationApi(gridId: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/setUp/${gridId}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     console.error('setupSimulationApi FAILED. Status:', res.status);
@@ -68,7 +145,7 @@ export async function placeRobotApi(robot: Robot): Promise<void> {
 
   const res = await fetch(`${BASE_URL}/api/simulation/placeRobot`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -81,7 +158,7 @@ export async function placeRobotApi(robot: Robot): Promise<void> {
 export async function placeTaskApi(task: Task): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/placeTask`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(task.location),
   });
   if (!res.ok) {
@@ -95,7 +172,7 @@ export async function placeTaskApi(task: Task): Promise<void> {
 export async function deleteObjectApi(location:any): Promise<void> {
    const res = await fetch(`${BASE_URL}/api/simulation/deleteObject`, { 
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(location), 
   });
   if (!res.ok) {
@@ -114,7 +191,7 @@ export async function deleteObjectApi(location:any): Promise<void> {
 export async function selectStrategyApi(strategy: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/selectStrategy`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ strategy }),
   });
   if (!res.ok) throw new Error('Selecting strategy failed');
@@ -153,6 +230,7 @@ export async function getSimulationStateApi(): Promise<{
 export async function startSimulationControlApi(): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/control/start`, {
     method: 'POST',
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     const errorBody = await res.text();
@@ -166,6 +244,7 @@ export async function startSimulationControlApi(): Promise<void> {
 export async function pauseSimulationControlApi(): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/control/pause`, {
     method: 'POST',
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     const errorBody = await res.text();
@@ -179,6 +258,7 @@ export async function pauseSimulationControlApi(): Promise<void> {
 export async function resumeSimulationControlApi(): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/control/resume`, {
     method: 'POST',
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     const errorBody = await res.text();
@@ -192,6 +272,7 @@ export async function resumeSimulationControlApi(): Promise<void> {
 export async function resetSimulationControlApi(): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/control/reset`, {
     method: 'POST',
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     const errorBody = await res.text();
@@ -206,7 +287,7 @@ export async function resetSimulationControlApi(): Promise<void> {
 export async function setSpeedFactorControlApi(factor: number): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/simulation/control/speed`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ factor }),
   });
   if (!res.ok) {

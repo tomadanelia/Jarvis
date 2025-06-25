@@ -255,3 +255,50 @@
     *   [ ] Review and add missing integration tests for new backend routes (`/simulation/control/*`).
     *   [ ] Write frontend component tests (React Testing Library) for new UI pieces (`GridDisplay` visuals, `InfoPanel`, `ControlPanel`) and their interaction with the store/API service.
     *   [ ] Plan and (optionally) implement E2E tests covering the full simulation flow (setup, start, observe, finish, reset).
+
+    ## Phase 7: User Authentication (Simplified) (Est: 4-6 hours)
+
+### Iteration 14: Backend - Supabase Auth & Routes (Est: 2-3 hours)
+*   **[ ] (Est: 15-30 min) Enable & Configure Supabase Auth**
+    *   [ ] In the Supabase Dashboard, go to Authentication -> Providers and enable the "Email" provider.
+    *   [ ] Define a new table `user_profiles` to store public user data linked to an authenticated user:
+        ```sql
+        CREATE TABLE public.user_profiles (
+            id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+            username TEXT UNIQUE,
+            updated_at TIMESTAMPTZ DEFAULT now()
+        );
+        -- Function to create a profile when a new user signs up
+        CREATE OR REPLACE FUNCTION public.handle_new_user()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          INSERT INTO public.user_profiles (id)
+          VALUES (new.id);
+          RETURN new;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+        -- Trigger to call the function
+        CREATE TRIGGER on_auth_user_created
+          AFTER INSERT ON auth.users
+          FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+        ```
+*   **[ ] (Est: 1-1.5 hours) Implement Auth Routes & Controller**
+    *   [ ] In `packages/backend`, create `src/controllers/authController.ts`.
+        *   [ ] Implement `signupUser(req, res)`: takes email/password, calls `supabase.auth.signUp()`, returns session/user data.
+        *   [ ] Implement `loginUser(req, res)`: takes email/password, calls `supabase.auth.signInWithPassword()`, returns session/user data.
+    *   [ ] Create `src/routes/authRoutes.ts` to map `/signup` and `/login` to the controller functions.
+    *   [ ] Mount the new router in `app.ts`: `app.use('/api/auth', authRoutes)`.
+*   **[ ] (Est: 30-60 min) Implement JWT Authentication Middleware**
+    *   [ ] In `packages/backend`, create `src/middleware/auth.ts`.
+    *   [ ] Implement a middleware function `(req, res, next)` that extracts the JWT from the `Authorization: Bearer <token>` header, verifies it with `supabase.auth.getUser(jwt)`, and attaches the user to the request.
+
+### Iteration 15: Frontend - Auth UI & State Management (Est: 2-3 hours)
+*   **[ ] (Est: 30-60 min) Update Frontend State & API Service**
+    *   [ ] In `simulationStore`, add state for `user` and `session`. Add actions for `login`, `signup`, `logout`.
+    *   [ ] In `apiService`, implement `login()` and `signup()` functions.
+    *   [ ] In `apiService`, create logic to store the JWT (e.g., in localStorage) and automatically add the `Authorization` header to protected API calls.
+*   **[ ] (Est: 1.5-2 hours) Create Auth Components & Routing**
+    *   [ ] Install `react-router-dom`.
+    *   [ ] Create `LoginPage.tsx` and `SignupPage.tsx` with simple forms to call the `apiService` functions.
+    *   [ ] Create a `Navbar.tsx` or similar component that conditionally renders Login/Signup links or a Logout button based on the auth state in the store.
+    *   [ ] Set up basic routing in `App.tsx` to handle `/login`, `/signup`, and the main `/` page.

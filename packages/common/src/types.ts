@@ -1,6 +1,8 @@
+// packages/common/src/types.ts
+
 export interface Coordinates{
-x:number;
-y:number;
+    x:number;
+    y:number;
 }
 export type CellType = `walkable`|`wall`|`chargingStation`|`empty`;
 export interface Cell{
@@ -35,4 +37,13 @@ export interface Robot{
     workProgress?: number;
     waitingBecauseOfRobotId?: string; 
 
+}
+
+// --- NEWLY ADDED ---
+/**
+ * Represents the credentials for signing up or logging in.
+ */
+export interface UserCredentials {
+  email: string;
+  password: string;
 }
