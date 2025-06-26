@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react'; // Import useMemo
 import type { Cell, Robot, Task } from '../../../common/src/types';
 import { useSimulationStore } from '../store/simulationStore';
 import { deleteObjectApi, placeRobotApi, placeTaskApi } from '../services/apiService';
@@ -22,7 +22,7 @@ interface GridDisplayProps {
 }
 
 const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
-  const isLowBattery = robot.battery < LOW_BATTERY_THRESHOLD;
+  const isLowBattery = robot.battery < LOW_BATTERY_THRESHOLD && robot.type === 'worker';
   const style: React.CSSProperties = {
     position: 'absolute',
     top: `${robot.currentLocation.y * CELL_SIZE}px`,
@@ -72,20 +72,34 @@ const TaskVisual: React.FC<{ task: Task }> = ({ task }) => {
 
 const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
   const { currentPlacementMode, selectedGridId } = useSimulationStore();
+  
+  // --- THIS IS THE FIX ---
+  // 1. Select the raw robots array from the store.
   const allRobots = useSimulationStore(state => state.robots);
+
+  // 2. Use `useMemo` to create the filtered array. This will only re-calculate
+  //    `workerRobots` when the `allRobots` array reference changes.
+  const workerRobots = useMemo(() => allRobots.filter(r => r.type === 'worker'), [allRobots]);
+  // --- END OF FIX ---
 
   const handleCellClick = async (x: number, y: number) => {
     if (!currentPlacementMode || !selectedGridId) return;
     try {
       const coordinates = { x, y };
+
       if (currentPlacementMode === 'robot') {
-        const nextIcon = ROBOT_ICONS[allRobots.length % ROBOT_ICONS.length];
-        await placeRobotApi({ currentLocation: coordinates, iconType: nextIcon } as Robot);
-      } else if (currentPlacementMode === 'task') {
+        const nextIcon = ROBOT_ICONS[workerRobots.length % ROBOT_ICONS.length];
+        await placeRobotApi({ currentLocation: coordinates, iconType: nextIcon }, 'worker');
+      } 
+      else if (currentPlacementMode === 'charger') {
+        const chargerIcon = '/assets/robots/charger-robot.png';
+        await placeRobotApi({ currentLocation: coordinates, iconType: chargerIcon }, 'charger');
+      } 
+      else if (currentPlacementMode === 'task') {
         await placeTaskApi({ location: coordinates } as Task);
       }
-        else if(currentPlacementMode==='delete'){
-       await deleteObjectApi(coordinates);
+      else if (currentPlacementMode === 'delete') {
+        await deleteObjectApi(coordinates);
       }
 
     } catch (err) {
@@ -102,8 +116,7 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
           {layout.map((row, y) => (
             <div key={`row-${y}`} style={{ display: 'flex' }}>
               {row.map((cell, x) => {
-                // A classier, more muted color palette
-                let bgColor = '#2d3748'; // Default to wall/empty color
+                let bgColor = '#2d3748';
                 if (cell.type === 'walkable') bgColor = '#4a5568';
                 else if (cell.type === 'wall') bgColor = '#2d3748';
                 else if (cell.type === 'chargingStation') bgColor = '#38b2ac';
@@ -141,5 +154,5 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
     </div>
   );
 };
-
+ 
 export default GridDisplay;
