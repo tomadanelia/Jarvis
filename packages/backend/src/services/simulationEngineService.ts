@@ -1,8 +1,18 @@
+// packages/backend/src/services/simulationEngineService.ts
+
 import { simulationStateService, SimulationStateService } from "./simulationStateService";
 import { PathfindingService, pathfindingService } from "./pathfindingService";
-import { BASE_SIMULATION_STEP_INTERVAL_MS, CHARGING_DURATION_STEPS, DEFAULT_SIMULATION_SPEED_FACTOR, LOW_BATTERY_THRESHOLD, ROBOT_MAX_CONSECUTIVE_WAIT_STEPS_FOR_REPATH } from "../config/constants";
+import { 
+    BASE_SIMULATION_STEP_INTERVAL_MS, 
+    CHARGING_DURATION_STEPS, 
+    DEFAULT_SIMULATION_SPEED_FACTOR, 
+    LOW_BATTERY_THRESHOLD, 
+    ROBOT_MAX_CONSECUTIVE_WAIT_STEPS_FOR_REPATH,
+    CHARGING_DELIVERY_RATE, 
+    CHARGE_DELIVERY_TARGET_THRESHOLD 
+} from "../config/constants";
 import { moveRobotOneStep } from "./robotService";
-import { Cell, Coordinates, Robot, Task } from "@common/types";
+import { Cell, Coordinates, Robot, Task, RobotType } from "@common/types";
 import { taskAssignmentService, TaskAssignmentService } from "./taskAssignmentService";
 import { webSocketManager } from './webSocketManager';
 import { supabaseService } from './supabaseService';
@@ -52,6 +62,7 @@ export class SimulationEngineService {
    * @private
    */
   private step(): void {
+    console.log(`SIM_ENGINE_STEP_START: --- Step ${this.simulationStateService.getSimulationTime()} --- Status: ${this.simulationStateService.getSimulationStatus()}`);
     if (this.simulationStateService.getSimulationStatus() !== 'running') {
          console.warn("SIM_ENGINE_STEP_WARN: Step called but status is not 'running'. Exiting step.");
             if (this.intervalId) {
@@ -74,6 +85,7 @@ export class SimulationEngineService {
             this.endSimulation(); 
             return;
         }
+    console.log(`SIM_ENGINE_STEP_END (Tick ${currentTick}): Broadcasting simulation update.`);
         webSocketManager.broadcastSimulationUpdate();
     }
 
@@ -87,6 +99,7 @@ export class SimulationEngineService {
   public async startSimulation(): Promise<void> {
     if (!this.simulationStateService.getCurrentGrid()) {
       throw new Error("SIM_ENGINE_SERVICE: Cannot start simulation, no grid loaded.");
+      return; 
     }
     if (this.simulationStateService.getSimulationStatus() === 'running') {
             console.log('SIM_ENGINE: Simulation is already running.');
@@ -214,7 +227,7 @@ export class SimulationEngineService {
 
     for (const robot of robots) {
         let nextCell: Coordinates | null = null;
-        if ((robot.status === 'onTaskWay' || robot.status === 'onChargingWay') &&
+        if ((robot.status === 'onTaskWay' || robot.status === 'onChargingWay' || robot.status === 'onChargeeWay') &&
             robot.currentPath && robot.currentPath.length > 0) {
             nextCell = robot.currentPath[0];
         }
@@ -442,52 +455,161 @@ private setRobotToIdleAndUnassignTask(robotId: string, originalStatus?: string, 
  * and uses helper methods for every type of status of robot idle,ontaskway,onChargingway
  * calls handlers of al 3 types of status of robot 
  */
-  private processAllRobotLogicAfterMovement(): void {
+private processAllRobotLogicAfterMovement(): void {
     const robots = this.simulationStateService.getRobots();
     for (const robot of robots) {
-        const currentRobotState = this.simulationStateService.getRobotById(robot.id);
-        if (!currentRobotState) continue;
-
-        const isAtTarget = currentRobotState.currentTarget &&
-            currentRobotState.currentLocation.x === currentRobotState.currentTarget.x &&
-            currentRobotState.currentLocation.y === currentRobotState.currentTarget.y;
-
-        if (isAtTarget && (currentRobotState.status === 'onTaskWay' || currentRobotState.status === 'onChargingWay') && (!currentRobotState.currentPath || currentRobotState.currentPath.length === 0) ) {
-            if (currentRobotState.status === 'onTaskWay') {
-                console.log(`SIM_ENGINE_ARRIVAL (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} arrived at task.`);
-                this.simulationStateService.updateRobotState(currentRobotState.id, {
-                    status: 'performingTask', 
-                    currentTarget: undefined,
-                });
-                const updatedRobotStateForTask = this.simulationStateService.getRobotById(robot.id)!;
-                this.handlePerformingTaskLogic(updatedRobotStateForTask); 
-                continue; 
-            } else if (currentRobotState.status === 'onChargingWay') {
-                console.log(`SIM_ENGINE_ARRIVAL (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} arrived at charger.`);
-                this.simulationStateService.updateRobotState(currentRobotState.id, {
-                    status: 'charging',
-                    currentTarget: undefined,
-                });
-                const updatedRobotStateForCharging = this.simulationStateService.getRobotById(robot.id)!;
-                this.handleChargingLogic(updatedRobotStateForCharging); 
-                continue; 
-            }
-        }
-        switch (currentRobotState.status) {
-            case 'performingTask':
-                this.handlePerformingTaskLogic(currentRobotState);
-                break;
-            case 'charging':
-                this.handleChargingLogic(currentRobotState);
-                break;
-            case 'idle':
-                this.handleIdleLogic(currentRobotState);
-                break;
-            case 'onTaskWay': 
-            case 'onChargingWay': 
-                break;
+        if (robot.type === 'charger') {
+            this.handleChargerRobotLogic(robot);
+        } else {
+            this.handleWorkerRobotLogic(robot);
         }
     }
+}
+
+private handleWorkerRobotLogic(robot: Robot): void {
+    const currentRobotState = this.simulationStateService.getRobotById(robot.id);
+    if (!currentRobotState) return;
+
+    const isAtTarget = currentRobotState.currentTarget &&
+        currentRobotState.currentLocation.x === currentRobotState.currentTarget.x &&
+        currentRobotState.currentLocation.y === currentRobotState.currentTarget.y;
+
+    if (isAtTarget && (currentRobotState.status === 'onTaskWay' || currentRobotState.status === 'onChargingWay') && (!currentRobotState.currentPath || currentRobotState.currentPath.length === 0) ) {
+        if (currentRobotState.status === 'onTaskWay') {
+            console.log(`SIM_ENGINE_ARRIVAL (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} arrived at task.`);
+            this.simulationStateService.updateRobotState(currentRobotState.id, {
+                status: 'performingTask', 
+                currentTarget: undefined,
+            });
+            const updatedRobotStateForTask = this.simulationStateService.getRobotById(robot.id)!;
+            this.handlePerformingTaskLogic(updatedRobotStateForTask); 
+            return;
+        } else if (currentRobotState.status === 'onChargingWay') {
+            console.log(`SIM_ENGINE_ARRIVAL (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${currentRobotState.id} arrived at charger.`);
+            this.simulationStateService.updateRobotState(currentRobotState.id, {
+                status: 'charging',
+                currentTarget: undefined,
+            });
+            const updatedRobotStateForCharging = this.simulationStateService.getRobotById(robot.id)!;
+            this.handleChargingLogic(updatedRobotStateForCharging); 
+            return;
+        }
+    }
+    switch (currentRobotState.status) {
+        case 'performingTask':
+            this.handlePerformingTaskLogic(currentRobotState);
+            break;
+        case 'charging':
+            this.handleChargingLogic(currentRobotState);
+            break;
+        case 'idle':
+            this.handleIdleLogic(currentRobotState);
+            break;
+        case 'onTaskWay': 
+        case 'onChargingWay': 
+            break;
+    }
+}
+
+private handleChargerRobotLogic(robot: Robot): void {
+    const charger = this.simulationStateService.getRobotById(robot.id);
+    if (!charger) return;
+
+    const isAtTarget = charger.currentTarget &&
+        charger.currentLocation.x === charger.currentTarget.x &&
+        charger.currentLocation.y === charger.currentTarget.y;
+
+    if (isAtTarget && charger.status === 'onChargeeWay') {
+        this.simulationStateService.updateRobotState(charger.id, {
+            status: 'deliveringCharge',
+            currentPath: undefined,
+            currentTarget: undefined,
+        });
+    }
+    
+    switch (charger.status) {
+        case 'idle':
+            const strandedRobot = this.findStrandedRobot();
+            if (strandedRobot) {
+                console.log(`CHARGER_LOGIC: Charger ${charger.id} found stranded target ${strandedRobot.id}.`);
+                const path = this.pathfindingService.findPath(this.simulationStateService.getCurrentGrid()!, charger.currentLocation, strandedRobot.currentLocation);
+                
+                if (path && path.length > 0) {
+                    this.simulationStateService.updateRobotState(charger.id, {
+                        status: 'onChargeeWay',
+                        targetRobotId: strandedRobot.id,
+                        currentTarget: strandedRobot.currentLocation,
+                        currentPath: path,
+                    });
+                }
+            }
+            break;
+
+        case 'deliveringCharge':
+            if (!charger.targetRobotId) {
+                this.simulationStateService.updateRobotState(charger.id, { status: 'idle' });
+                return;
+            }
+
+            const chargee = this.simulationStateService.getRobotById(charger.targetRobotId);
+            if (!chargee || chargee.battery >= CHARGE_DELIVERY_TARGET_THRESHOLD) {
+                this.simulationStateService.updateRobotState(charger.id, {
+                    status: 'idle',
+                    targetRobotId: undefined,
+                });
+                console.log(`CHARGER_LOGIC: Charger ${charger.id} finished charging ${charger.targetRobotId}. Returning to idle.`);
+                return;
+            }
+
+            const actualTransferAmount = Math.min(CHARGING_DELIVERY_RATE, charger.battery);
+            this.simulationStateService.updateRobotState(charger.id, { battery: charger.battery - actualTransferAmount });
+            this.simulationStateService.updateRobotState(chargee.id, { battery: chargee.battery + actualTransferAmount });
+            break;
+
+        case 'onChargeeWay':
+            break;
+    }
+}
+
+private findStrandedRobot(): Robot | undefined {
+    const allRobots = this.simulationStateService.getRobots();
+    const workerRobots = allRobots.filter(r => r.type === 'worker');
+
+    for (const robot of workerRobots) {
+        if (robot.status !== 'idle') continue;
+
+        const travelCostToNearestCharger = this.getCostToNearestCharger(robot);
+        if (travelCostToNearestCharger === null) continue;
+
+        if (robot.battery < travelCostToNearestCharger) {
+            const isTargeted = allRobots.some(r => r.type === 'charger' && r.targetRobotId === robot.id);
+            if (!isTargeted) {
+                return robot;
+            }
+        }
+    }
+    return undefined;
+}
+
+private getCostToNearestCharger(robot: Robot): number | null {
+    const grid = this.simulationStateService.getCurrentGrid();
+    const stations = this.simulationStateService.getChargingStations();
+    if (!grid || stations.length === 0) return null;
+    
+    let shortestPathLength: number | null = null;
+    
+    for (const station of stations) {
+        const path = this.pathfindingService.findPath(grid, robot.currentLocation, station);
+        if (path.length > 0) {
+            if (shortestPathLength === null || path.length < shortestPathLength) {
+                shortestPathLength = path.length;
+            }
+        }
+    }
+    
+    if (shortestPathLength === null) return null;
+
+    return (shortestPathLength - 1) * robot.movementCostPerCell;
 }
 
 /**
@@ -573,17 +695,12 @@ private handleIdleLogic(robot: Robot): void {
         }
 
         if (shortestPathToCharger && bestChargerLocation) {
-             const travelCost = (shortestPathToCharger.length - 1) * robot.movementCostPerCell;
-    if (robot.battery >= travelCost) {
-        console.log(`SIM_ENGINE_TO_CHARGE (Tick...): Robot ${robot.id} going to charge...`);
-        this.simulationStateService.updateRobotState(robot.id, {
-            status: 'onChargingWay',
-            currentTarget: bestChargerLocation,
-            currentPath: shortestPathToCharger
-        });
-    } else {
-        console.warn(`SIM_ENGINE (Tick...): Robot ${robot.id} needs to charge but cannot afford the trip. Stranded.`);
-    }
+            console.log(`SIM_ENGINE_TO_CHARGE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} going to charge at ${bestChargerLocation.x},${bestChargerLocation.y}.`);
+            this.simulationStateService.updateRobotState(robot.id, {
+                status: 'onChargingWay',
+                currentTarget: bestChargerLocation,
+                currentPath: shortestPathToCharger
+            });
         } else {
             console.warn(`SIM_ENGINE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} needs charge but cannot find path to any station.`);
         }
