@@ -17,7 +17,16 @@ export function moveRobotOneStep(robotId: string): boolean {
       console.warn(`ROBOT_SERVICE: Robot with ID ${robotId} not found.`);
       return false;
     }
-    else if(!robot.currentPath || robot.currentPath.length === 0) {
+    if (robot.battery <= 0) {
+        console.warn(`ROBOT_SERVICE: Robot ${robot.id} cannot move, battery is at or below 0.`);
+        simulationStateService.updateRobotState(robot.id, {
+            status: 'idle',
+            currentPath: undefined,
+            currentTarget: undefined,
+        });
+        return false; 
+    }
+     if(!robot.currentPath || robot.currentPath.length === 0) {
       console.warn(`ROBOT_SERVICE: Robot ${robotId} has no path to follow.`);
       return false;
     }

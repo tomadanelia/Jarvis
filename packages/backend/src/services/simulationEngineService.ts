@@ -52,7 +52,6 @@ export class SimulationEngineService {
    * @private
    */
   private step(): void {
-    console.log(`SIM_ENGINE_STEP_START: --- Step ${this.simulationStateService.getSimulationTime()} --- Status: ${this.simulationStateService.getSimulationStatus()}`);
     if (this.simulationStateService.getSimulationStatus() !== 'running') {
          console.warn("SIM_ENGINE_STEP_WARN: Step called but status is not 'running'. Exiting step.");
             if (this.intervalId) {
@@ -75,7 +74,6 @@ export class SimulationEngineService {
             this.endSimulation(); 
             return;
         }
-    console.log(`SIM_ENGINE_STEP_END (Tick ${currentTick}): Broadcasting simulation update.`);
         webSocketManager.broadcastSimulationUpdate();
     }
 
@@ -89,7 +87,6 @@ export class SimulationEngineService {
   public async startSimulation(): Promise<void> {
     if (!this.simulationStateService.getCurrentGrid()) {
       throw new Error("SIM_ENGINE_SERVICE: Cannot start simulation, no grid loaded.");
-      return; 
     }
     if (this.simulationStateService.getSimulationStatus() === 'running') {
             console.log('SIM_ENGINE: Simulation is already running.');
@@ -576,12 +573,17 @@ private handleIdleLogic(robot: Robot): void {
         }
 
         if (shortestPathToCharger && bestChargerLocation) {
-            console.log(`SIM_ENGINE_TO_CHARGE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} going to charge at ${bestChargerLocation.x},${bestChargerLocation.y}.`);
-            this.simulationStateService.updateRobotState(robot.id, {
-                status: 'onChargingWay',
-                currentTarget: bestChargerLocation,
-                currentPath: shortestPathToCharger
-            });
+             const travelCost = (shortestPathToCharger.length - 1) * robot.movementCostPerCell;
+    if (robot.battery >= travelCost) {
+        console.log(`SIM_ENGINE_TO_CHARGE (Tick...): Robot ${robot.id} going to charge...`);
+        this.simulationStateService.updateRobotState(robot.id, {
+            status: 'onChargingWay',
+            currentTarget: bestChargerLocation,
+            currentPath: shortestPathToCharger
+        });
+    } else {
+        console.warn(`SIM_ENGINE (Tick...): Robot ${robot.id} needs to charge but cannot afford the trip. Stranded.`);
+    }
         } else {
             console.warn(`SIM_ENGINE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} needs charge but cannot find path to any station.`);
         }
