@@ -1,4 +1,4 @@
-import type { Task, Robot, Cell, SimulationStatus, UserCredentials } from '../../../common/src/types';
+import type { RobotType,Task, Robot, Cell, SimulationStatus, UserCredentials } from '../../../common/src/types';
 import type { AuthResponse } from '@supabase/supabase-js';
 
 /**
@@ -137,10 +137,11 @@ export async function setupSimulationApi(gridId: string): Promise<void> {
  * @returns {Promise<void>}
  * @throws Will throw an error if the placement fails.
  */
-export async function placeRobotApi(robot: Robot): Promise<void> {
+export async function placeRobotApi(robot: Partial<Robot>,type: RobotType = 'worker'): Promise<void> {
   const payload = {
     location: robot.currentLocation,
     iconType: robot.iconType,
+    type:type,
   };
 
   const res = await fetch(`${BASE_URL}/api/simulation/placeRobot`, {

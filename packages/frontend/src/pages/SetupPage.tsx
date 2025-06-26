@@ -33,6 +33,15 @@ export default function SetupPage() {
             Place Robots
           </button>
           <button
+            onClick={() => setPlacementMode('charger')}
+            style={{
+              backgroundColor: currentPlacementMode === 'charger' ? '#90ee90' : '',
+              marginRight: '1rem',
+            }}
+          >
+            Place Charger Robot
+          </button>
+          <button
             onClick={() => setPlacementMode('task')}
             style={{
               backgroundColor: currentPlacementMode === 'task' ? '#ffd580' : '',

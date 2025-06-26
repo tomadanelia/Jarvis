@@ -28,7 +28,7 @@ interface SimulationEndedPayload {
 }
 
 /** Mode used to determine what is being placed: robot or task. */
-type PlacementMode = 'robot' | 'task' | 'delete' | null;
+type PlacementMode = 'robot' | 'task' | 'charger' | 'delete' | null;
 
 /**
  * Zustand store state and actions for managing simulation UI and logic.

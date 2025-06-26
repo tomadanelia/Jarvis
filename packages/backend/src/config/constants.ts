@@ -11,3 +11,6 @@ export const DEFAULT_SIMULATION_SPEED_FACTOR = 1.0;
 export const BASE_SIMULATION_STEP_INTERVAL_MS = 1000; 
 
 export const DEFAULT_ROBOT_ICON = 'robot_icon_green.png'; 
+export const CHARGER_ROBOT_MAX_BATTERY = 1000; 
+export const CHARGING_DELIVERY_RATE = 10; 
+export const CHARGE_DELIVERY_TARGET_THRESHOLD = 50; 

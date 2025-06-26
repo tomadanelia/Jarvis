@@ -42,14 +42,15 @@ export const simulationSetUp = async (
  */
 export const placeRobot= async (req:Request,res:Response ):Promise<void>=>{
     try {
-    const {location,iconType}=req.body;
+const { location, iconType, type } = req.body;
         if (!location||!iconType || typeof iconType !== "string" || typeof location.x !== "number" || typeof location.y!=="number" ) {
       res.status(400).json({ error: "invalid parameters for placeRobot controler" });
       return;
     }
-    const robot=simulationStateService.addRobot(location,iconType);
-    if (robot==null){
-         res.status(400).json({ error: "invalid placement location for task" });
+        const robot = simulationStateService.addRobot(location, iconType, type);
+
+        if (robot==null){
+       res.status(400).json({ error: "invalid placement location for task" });
         return;
     }
     res.status(200).json({robot});

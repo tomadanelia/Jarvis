@@ -20,10 +20,21 @@ export interface Task{
     workDuration:number;
     batteryCostToPerform:number;
 }
-export type RobotStatus=`onChargingWay`|`idle`|`onTaskWay`|`charging`|`performingTask`;
+export type RobotType = 'worker' | 'charger';
+
+export type RobotStatus=
+`onChargingWay`
+|`idle`
+|`onTaskWay`
+|`charging`
+|`performingTask`
+| `onChargeeWay`      //  On the way to a robot that needs charging
+ | `deliveringCharge`;  //Actively charging another robot
 export interface Robot{
     id: string;
     iconType:string;
+    type: RobotType;
+    targetRobotId?: string;
     battery:number;
     maxBattery:number;
     status:RobotStatus;
