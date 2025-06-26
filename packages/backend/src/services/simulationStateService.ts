@@ -9,7 +9,9 @@ import {
     Task,
     RobotStatus,
     TaskStatus,
-    CellType, 
+    CellType,
+    RobotType, 
+
 } from '@common/types'; 
 
 import {
@@ -18,9 +20,11 @@ import {
     INITIAL_CONSECUTIVE_WAIT_STEPS,
     DEFAULT_TASK_WORK_DURATION,
     DEFAULT_BATTERY_COST_TO_PERFORM_TASK,
+    CHARGER_ROBOT_MAX_BATTERY,
     // Add any other relevant constants you might need
 } from '../config/constants'; // Adjust path as needed
 import { UserSetup } from './supabaseService';
+
 
 
 
@@ -131,7 +135,7 @@ export class SimulationStateService {
  * @param iconType - The string identifier for the robot's visual icon.
  * @returns The newly created Robot object, or null if placement is invalid or simulation is active.
  */
-    public addRobot(location: Coordinates, iconType: string): Robot | null {
+    public addRobot(location: Coordinates, iconType: string,type:RobotType= "worker"): Robot | null {
         if (!this.currentGrid) {
             console.warn("SIM_STATE_SERVICE: Cannot add robot, no grid loaded.");
             return null;
@@ -140,14 +144,16 @@ export class SimulationStateService {
             console.warn(`SIM_STATE_SERVICE: Invalid placement for robot at (${location.x}, ${location.y}).`);
             return null;
         }
-
+const isCharger = type === 'charger';
+    const maxBattery = isCharger ? CHARGER_ROBOT_MAX_BATTERY : DEFAULT_ROBOT_MAX_BATTERY;
         const newRobot: Robot = {
             id: uuidv4(),
+            type:type,
             iconType: iconType,
             currentLocation: { ...location },
             initialLocation:{...location},
-            battery: DEFAULT_ROBOT_MAX_BATTERY,
-            maxBattery: DEFAULT_ROBOT_MAX_BATTERY,
+            battery: maxBattery,
+            maxBattery: maxBattery,
             status: 'idle',
             assignedTaskId: undefined,
             currentTarget: undefined,
