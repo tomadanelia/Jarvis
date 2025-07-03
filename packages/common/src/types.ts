@@ -28,6 +28,7 @@ export type RobotStatus=
 |`onTaskWay`
 |`charging`
 |`performingTask`
+|`stranded`
 | `onChargeeWay`      //  On the way to a robot that needs charging
  | `deliveringCharge`;  //Actively charging another robot
 export interface Robot{

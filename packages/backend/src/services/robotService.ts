@@ -20,7 +20,7 @@ export function moveRobotOneStep(robotId: string): boolean {
     if (robot.battery <= 0) {
         console.warn(`ROBOT_SERVICE: Robot ${robot.id} cannot move, battery is at or below 0.`);
         simulationStateService.updateRobotState(robot.id, {
-            status: 'idle',
+            status: 'stranded',
             currentPath: undefined,
             currentTarget: undefined,
         });
