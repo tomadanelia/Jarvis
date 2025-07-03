@@ -91,6 +91,7 @@ export const deleteObject= async (req:Request,res:Response):Promise<void>=>{
     const location=req.body
        if (!location||typeof location.x !== "number" || typeof location.y!=="number" ) {
       res.status(400).json({ error: "invalid parameters for deleteRobot controler" });
+      console.error("invalid parameters for deleteRobot controler");
       return;
     }
     const robots=simulationStateService.getRobots();
@@ -115,6 +116,7 @@ if (task?.id != undefined) {
 
 if (!robotFlag && !taskFlag) {
   res.status(400).json({ error: "Deletion failed" });
+  return;
 }
   } catch (error) {
     res.status(500).json({error:"internal server error"})
