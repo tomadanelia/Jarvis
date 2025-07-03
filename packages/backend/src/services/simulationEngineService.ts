@@ -515,18 +515,24 @@ private handleChargerRobotLogic(robot: Robot): void {
     const charger = this.simulationStateService.getRobotById(robot.id);
     if (!charger) return;
 
-    const isAtTarget = charger.currentTarget &&
-        charger.currentLocation.x === charger.currentTarget.x &&
-        charger.currentLocation.y === charger.currentTarget.y;
+  if (charger.status === 'onChargeeWay' && charger.targetRobotId) {
+        const chargee = this.simulationStateService.getRobotById(charger.targetRobotId);
+        if (chargee) {
+            // Calculate Manhattan distance. If it's 1, they are adjacent.
+            const distance = Math.abs(charger.currentLocation.x - chargee.currentLocation.x) +
+                             Math.abs(charger.currentLocation.y - chargee.currentLocation.y);
 
-    if (isAtTarget && charger.status === 'onChargeeWay') {
-        this.simulationStateService.updateRobotState(charger.id, {
-            status: 'deliveringCharge',
-            currentPath: undefined,
-            currentTarget: undefined,
-        });
+            if (distance === 1) {
+                console.log(`CHARGER_LOGIC: Charger ${charger.id} arrived next to ${chargee.id}. Starting to charge.`);
+                this.simulationStateService.updateRobotState(charger.id, {
+                    status: 'deliveringCharge',
+                    currentPath: undefined, // Stop moving
+                    currentTarget: undefined,
+                });
+                // Since we've changed status, we can fall through to the 'deliveringCharge' logic immediately.
+            }
+        }
     }
-    
     switch (charger.status) {
         case 'idle':
             const strandedRobot = this.findStrandedRobot();
@@ -550,17 +556,24 @@ private handleChargerRobotLogic(robot: Robot): void {
                 this.simulationStateService.updateRobotState(charger.id, { status: 'idle' });
                 return;
             }
+            console.log(`CHARGER_LOGIC: Charger ${charger.id} delivering charge to ${charger.targetRobotId}.`);
 
             const chargee = this.simulationStateService.getRobotById(charger.targetRobotId);
-            if (!chargee || chargee.battery >= CHARGE_DELIVERY_TARGET_THRESHOLD) {
-                this.simulationStateService.updateRobotState(charger.id, {
-                    status: 'idle',
-                    targetRobotId: undefined,
-                });
-                console.log(`CHARGER_LOGIC: Charger ${charger.id} finished charging ${charger.targetRobotId}. Returning to idle.`);
-                return;
-            }
-
+            if (!chargee || chargee.status === 'idle' || chargee.battery >= CHARGE_DELIVERY_TARGET_THRESHOLD) {
+        this.simulationStateService.updateRobotState(charger.id, {
+            status: 'idle',
+            targetRobotId: undefined,
+        });
+        
+        if (chargee) {
+            this.simulationStateService.updateRobotState(chargee.id, { status: 'idle' });
+        }
+        console.log(`CHARGER_LOGIC: Charger ${charger.id} finished charging. Both robots are now idle.`);
+        return; 
+    }
+    if (chargee.status === 'stranded') {
+        this.simulationStateService.updateRobotState(chargee.id, { status: 'charging' });
+    }
             const actualTransferAmount = Math.min(CHARGING_DELIVERY_RATE, charger.battery);
             this.simulationStateService.updateRobotState(charger.id, { battery: charger.battery - actualTransferAmount });
             this.simulationStateService.updateRobotState(chargee.id, { battery: chargee.battery + actualTransferAmount });
@@ -570,25 +583,31 @@ private handleChargerRobotLogic(robot: Robot): void {
             break;
     }
 }
-
+/**
+ * 
+ * @returns finds a stranded robot that is not currently targeted by any charger
+ */
 private findStrandedRobot(): Robot | undefined {
     const allRobots = this.simulationStateService.getRobots();
-    const workerRobots = allRobots.filter(r => r.type === 'worker');
 
-    for (const robot of workerRobots) {
-        if (robot.status !== 'idle') continue;
-
-        const travelCostToNearestCharger = this.getCostToNearestCharger(robot);
-        if (travelCostToNearestCharger === null) continue;
-
-        if (robot.battery < travelCostToNearestCharger) {
-            const isTargeted = allRobots.some(r => r.type === 'charger' && r.targetRobotId === robot.id);
-            if (!isTargeted) {
-                return robot;
-            }
-        }
+    
+    const strandedRobot = allRobots.find(r => r.type === 'worker' && r.status ==='stranded');
+    
+    if (!strandedRobot) {
+        return undefined; 
     }
-    return undefined;
+
+    
+    const isAlreadyTargeted = allRobots.some(charger => 
+        charger.type === 'charger' && charger.targetRobotId === strandedRobot.id
+    );
+
+    if (isAlreadyTargeted) {
+        return undefined; // Someone else is on the job
+    }
+
+    
+    return strandedRobot;
 }
 
 private getCostToNearestCharger(robot: Robot): number | null {
@@ -695,7 +714,7 @@ private handleIdleLogic(robot: Robot): void {
         }
 
         if (shortestPathToCharger && bestChargerLocation) {
-            console.log(`SIM_ENGINE_TO_CHARGE (Tick ${this.simulationStateService.getSimulationTime()}): Robot ${robot.id} going to charge at ${bestChargerLocation.x},${bestChargerLocation.y}.`);
+          console.log(`SIM_ENGINE_TO_CHARGE (Tick ...): Robot ${robot.id} attempting last hope run to charger...`);
             this.simulationStateService.updateRobotState(robot.id, {
                 status: 'onChargingWay',
                 currentTarget: bestChargerLocation,
