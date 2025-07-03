@@ -39,10 +39,16 @@ const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
   return (
     <div style={style}>
       <img
-        src={robot.iconType}
-        alt="robot"
-        style={{ width: '90%', height: '90%', objectFit: 'contain' }}
-      />
+  src={robot.iconType}
+  alt="robot"
+  style={{
+    width: '120%',
+    height: '120%',
+    objectFit: 'contain',
+    pointerEvents: 'none', 
+  }}
+/>
+
       {isLowBattery && <div className="low-battery-indicator" />}
     </div>
   );
@@ -92,7 +98,7 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
         await placeRobotApi({ currentLocation: coordinates, iconType: nextIcon }, 'worker');
       } 
       else if (currentPlacementMode === 'charger') {
-        const chargerIcon = '/assets/robots/charger-robot.png';
+        const chargerIcon = '/assets/robots/rover.png';
         await placeRobotApi({ currentLocation: coordinates, iconType: chargerIcon }, 'charger');
       } 
       else if (currentPlacementMode === 'task') {
