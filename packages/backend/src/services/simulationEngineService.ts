@@ -9,7 +9,8 @@ import {
     LOW_BATTERY_THRESHOLD, 
     ROBOT_MAX_CONSECUTIVE_WAIT_STEPS_FOR_REPATH,
     CHARGING_DELIVERY_RATE, 
-    CHARGE_DELIVERY_TARGET_THRESHOLD 
+    CHARGE_DELIVERY_TARGET_THRESHOLD, 
+    DEFAULT_ROBOT_MAX_BATTERY
 } from "../config/constants";
 import { moveRobotOneStep } from "./robotService";
 import { Cell, Coordinates, Robot, Task, RobotType } from "@common/types";
@@ -559,7 +560,7 @@ private handleChargerRobotLogic(robot: Robot): void {
             console.log(`CHARGER_LOGIC: Charger ${charger.id} delivering charge to ${charger.targetRobotId}.`);
 
             const chargee = this.simulationStateService.getRobotById(charger.targetRobotId);
-            if (!chargee || chargee.status === 'idle' || chargee.battery >= CHARGE_DELIVERY_TARGET_THRESHOLD) {
+            if (!chargee || chargee.status === 'idle' || chargee.battery >= DEFAULT_ROBOT_MAX_BATTERY) {
         this.simulationStateService.updateRobotState(charger.id, {
             status: 'idle',
             targetRobotId: undefined,
