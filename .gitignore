@@ -29,3 +29,5 @@ packages/frontend/.vite/
 # OS files
 .DS_Store
 Thumbs.db
+#migrations
+.supabase/migrations/.temp/
