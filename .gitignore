@@ -30,4 +30,4 @@ packages/frontend/.vite/
 .DS_Store
 Thumbs.db
 #migrations
-.supabase/migrations/.temp/
+packages/backend/supabase/.temp
