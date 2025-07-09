@@ -296,3 +296,68 @@ export async function setSpeedFactorControlApi(factor: number): Promise<void> {
     throw new Error(`Setting speed factor failed. Status: ${res.status}. Message: ${errorBody}`);
   }
 }
+
+/**
+ * Fetches all saved setups for the authenticated user.
+ */
+export async function getAllSetupsApi(): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/setups`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json();
+    throw new Error(errorBody.error || 'Failed to fetch setups');
+  }
+  return res.json();
+}
+
+/**
+ * Saves the current simulation state as a new setup.
+ * @param name The name for the new setup.
+ */
+export async function saveSetupApi(name: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/setups`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json();
+    throw new Error(errorBody.error || 'Failed to save setup');
+  }
+  return res.json();
+}
+
+/**
+ * Loads a saved setup into the current simulation.
+ * @param setupId The ID of the setup to load.
+ */
+export async function loadSetupApi(setupId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/setups/load/${setupId}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json();
+    throw new Error(errorBody.error || 'Failed to load setup');
+  }
+  // This endpoint doesn't return the full state; it triggers a WebSocket broadcast.
+  // The frontend will update automatically via the 'initial_state' event.
+}
+
+/**
+ * Deletes a saved setup.
+ * @param setupId The ID of the setup to delete.
+ */
+export async function deleteSetupApi(setupId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/setups/${setupId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json();
+    throw new Error(errorBody.error || 'Failed to delete setup');
+  }
+  return res.json();
+}
