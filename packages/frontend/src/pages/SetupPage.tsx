@@ -4,6 +4,7 @@ import { useSimulationStore } from '../store/simulationStore';
 import StrategySelector from '../components/StrategySelector';
 import ControlPanel from '../components/ControlPanel';
 import InfoPanel from '../components/InfoPanel';
+import SetupManager from '../components/SetupManager';
 
 export default function SetupPage() {
   const {
@@ -12,6 +13,7 @@ export default function SetupPage() {
     tasks,
     setPlacementMode,
     currentPlacementMode,
+    user
   } = useSimulationStore();
 
   return (
@@ -20,6 +22,7 @@ export default function SetupPage() {
         <h1>Robot Task Simulation Setup</h1>
 
         <GridSelector />
+        {user && <SetupManager />}
 
         {/* Placement Controls */}
         <div style={{ marginTop: '1rem' }}>
