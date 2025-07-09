@@ -20,13 +20,19 @@ interface SimulationUpdatePayload {
   tasks: Task[];
   simulationTime: number;
   controllerClientId: string | null;
+  
 }
 
 interface SimulationEndedPayload {
   simulationTime: number;
   controllerClientId: string | null;
 }
-
+interface SavedSetup {
+  id: string;
+  name: string;
+  grid_id: string;
+  created_at: string;
+}
 /** Mode used to determine what is being placed: robot or task. */
 type PlacementMode = 'robot' | 'task' | 'charger' | 'delete' | null;
 
@@ -50,7 +56,11 @@ interface SimulationState {
   // Auth state
   user: User | null;
   session: Session | null;
+ savedSetups: SavedSetup[]; 
 
+  setSavedSetups: (setups: SavedSetup[]) => void; 
+  addSavedSetup: (setup: SavedSetup) => void; 
+  removeSavedSetup: (setupId: string) => void; 
   setAvailableGrids: (grids: { id: string; name: string }[]) => void;
   setSelectedGrid: (id: string, layout: Cell[][]) => void;
   setRobots: (robots: Robot[]) => void;
@@ -87,7 +97,12 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   // Auth state
   user: null,
   session: null,
-
+savedSetups: [],
+setSavedSetups: (setups) => set({ savedSetups: setups }), // NEW
+  addSavedSetup: (setup) => set((state) => ({ savedSetups: [setup, ...state.savedSetups] })), // NEW
+  removeSavedSetup: (setupId) => set((state) => ({
+    savedSetups: state.savedSetups.filter((s) => s.id !== setupId),
+  })), // NEW
   setAvailableGrids: (grids) => set({ availableGrids: grids }),
   setSelectedGrid: (id, layout) =>
     set({ selectedGridId: id, selectedGridLayout: layout, robots: [], tasks: [], simulationTime: 0, simulationStatus: 'idle' }),
