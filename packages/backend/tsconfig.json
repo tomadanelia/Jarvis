@@ -23,7 +23,9 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/*.test.ts",  
+    "**/*.spec.ts"   
   ],
   "references": [
     { "path": "../common" }
