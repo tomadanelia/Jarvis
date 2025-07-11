@@ -9,7 +9,7 @@
     "start": "ts-node-dev --respawn --transpile-only src/index.ts",
     "seed": "ts-node ./scripts/seedGrids.ts",
     "check-grids": "ts-node ./scripts/checkGrids.ts",
-      "copy-assets": "copyfiles -u 1 \"scripts/**/*.txt\" dist" 
+"copy-assets": "copyfiles \"scripts/**/*.txt\" dist"
 
   },
   "keywords": [],
