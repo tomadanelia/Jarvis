@@ -6,8 +6,23 @@ import authRoutes from './routes/authRoutes'; // Import auth routes
 import setupsRoutes from './routes/setupsRoutes'; // Import setups routes
 
 const app = express();
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://robot-simulation-frontend.onrender.com' 
+];
 
-app.use(cors());
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 //   mounting happens here
