@@ -125,21 +125,37 @@ This project is structured as a **monorepo** to ensure type safety and code shar
 ## Project Structure
 /
 ├── packages/
+
 │ ├── backend/ # Node.js, Express, Socket.IO Server
+
 │ │ ├── src/
+
 │ │ │ ├── controllers/
+
 │ │ │ ├── services/ # Core logic (simulation, pathfinding, etc.)
+
 │ │ │ ├── routes/
+
 │ │ │ └── ...
+
 │ │ ├── scripts/ # Database seeding scripts
+
 │ │ └── ...
+
 │ ├── common/ # Shared TypeScript types and constants
+
 │ └── frontend/ # React, Vite Client
+
 │ ├── src/
+
 │ │ ├── components/
+
 │ │ ├── services/ # API and WebSocket services
+
 │ │ ├── store/ # Zustand state management
+
 │ │ └── ...
+
 └── package.json # Root package.json for monorepo workspaces
 ## Backend Details
 
