@@ -30,5 +30,7 @@ app.use('/api/auth', authRoutes); // Mount auth routes
 app.use('/api/grids', gridRoutes);
 app.use('/api/simulation', simulationSetupRoutes);
 app.use('/api/setups', setupsRoutes); // Mount setups routes
-
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 export default app;
