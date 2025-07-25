@@ -49,7 +49,7 @@ export default function InfoPanel() {
     <div className="info-panel">
       <h2 style={{ color: '#ccc' }}>Robot Information</h2>
       {robots.length === 0 ? (
-        <p>No robots have been placed on the grid.</p>
+        <p className='info-text'>No robots have been placed on the grid.</p>
       ) : (
         <ul>
           {robots.map(robot => (

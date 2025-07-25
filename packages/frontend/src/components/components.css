@@ -1,0 +1,75 @@
+.grid-selector{
+    margin-top: 15px;
+    padding-left: 16px; 
+    text-decoration: rosybrown;
+  padding-right: 16px; 
+  padding-top: 8px;
+  padding-bottom: 8px;
+      font-weight: bold;
+
+  background-color: #eeee90
+;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.strategy-selector{
+     margin-top: 15px;
+         font-weight: bold;
+   padding-top: 5px;
+   padding-bottom: 5px;
+    padding-left: 16px; 
+    text-decoration: rosybrown;
+  padding-top: 8px;
+  padding-bottom: 8px;
+    background-color: #f08080;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.strategy-selector::after {
+  background-color: #f08080;
+  color: black;
+}
+.selectors{
+    flex-direction: row;
+    display: flex;
+
+}
+.placement-button:hover {
+    background-color: #add8e6;  
+    
+}
+
+.placement-button-charger:hover {
+    background-color: #90ee90;  
+}
+.placement-button-task:hover {
+    background-color: #ffd580;  
+}
+.placement-button-delete:hover {
+    background-color: pink;  
+}
+.statusp {
+    font-weight: bold;
+    color: rgb(190, 59, 59);
+}
+.timep {
+    font-weight: bold;
+    color: rgb(136, 136, 24);
+}
+.simulation-status-display {
+  border-radius: 8px;
+  color: rgb(108, 108, 199);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+      font-family: fantasy;
+
+  gap: 0.5rem;
+}
+

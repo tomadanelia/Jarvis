@@ -5,7 +5,7 @@ import StrategySelector from '../components/StrategySelector';
 import ControlPanel from '../components/ControlPanel';
 import InfoPanel from '../components/InfoPanel';
 import SetupManager from '../components/SetupManager';
-
+import "../components/components.css"
 export default function SetupPage() {
   const {
     selectedGridLayout,
@@ -21,12 +21,12 @@ export default function SetupPage() {
       <div className="main-content">
         <h1>Robot Task Simulation Setup</h1>
 
-        <GridSelector />
-        {user && <SetupManager />}
+     
 
         {/* Placement Controls */}
         <div style={{ marginTop: '1rem' }}>
           <button
+          className='placement-button'
             onClick={() => setPlacementMode('robot')}
             style={{
               backgroundColor: currentPlacementMode === 'robot' ? '#add8e6' : '',
@@ -36,6 +36,7 @@ export default function SetupPage() {
             Place Robots
           </button>
           <button
+            className='placement-button-charger'
             onClick={() => setPlacementMode('charger')}
             style={{
               backgroundColor: currentPlacementMode === 'charger' ? '#90ee90' : '',
@@ -45,6 +46,7 @@ export default function SetupPage() {
             Place Charger Robot
           </button>
           <button
+            className='placement-button-task'
             onClick={() => setPlacementMode('task')}
             style={{
               backgroundColor: currentPlacementMode === 'task' ? '#ffd580' : '',
@@ -53,17 +55,24 @@ export default function SetupPage() {
           >
             Place Tasks
           </button>
-          <button onClick={() => setPlacementMode('delete')}  style={{
+          <button 
+            className='placement-button-delete'
+          onClick={() => setPlacementMode('delete')}  style={{
               backgroundColor: currentPlacementMode === 'delete' ? 'pink' : '',
               marginRight: '1rem',
             }}>
             Delete Objects
            </button>
         </div>
-
-        {/* Strategy Selector */}
+           <div className='selectors'>
+            <GridSelector />
+   
         <StrategySelector />
+             
+           </div>
         <ControlPanel />
+        {user && <SetupManager />}
+        
 
         {/* Grid Display */}
         <div style={{ marginTop: '2rem' }}>

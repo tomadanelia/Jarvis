@@ -53,7 +53,6 @@ const RobotVisual: React.FC<{ robot: Robot }> = ({ robot }) => {
     </div>
   );
 };
-
 const TaskVisual: React.FC<{ task: Task }> = ({ task }) => {
   const style: React.CSSProperties = {
     position: 'absolute',
@@ -64,27 +63,35 @@ const TaskVisual: React.FC<{ task: Task }> = ({ task }) => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5
+    zIndex: 5,
+    pointerEvents: 'none'
   };
 
   const isWorking = task.status === 'inProgress';
 
   return (
     <div style={style}>
-      <div className={`task-icon ${isWorking ? 'in-progress' : ''}`} />
+      <div className={`task-icon ${isWorking ? 'in-progress' : ''}`}>
+        <img
+          src="/assets/setting.png"
+          alt="robot"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            pointerEvents: 'none'
+          }}
+        />
+      </div>
     </div>
   );
 };
-
 const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
   const { currentPlacementMode, selectedGridId } = useSimulationStore();
   
-  // --- THIS IS THE FIX ---
-  // 1. Select the raw robots array from the store.
+
   const allRobots = useSimulationStore(state => state.robots);
 
-  // 2. Use `useMemo` to create the filtered array. This will only re-calculate
-  //    `workerRobots` when the `allRobots` array reference changes.
   const workerRobots = useMemo(() => allRobots.filter(r => r.type === 'worker'), [allRobots]);
   // --- END OF FIX ---
 
@@ -122,8 +129,8 @@ const GridDisplay: React.FC<GridDisplayProps> = ({ layout, robots, tasks }) => {
           {layout.map((row, y) => (
             <div key={`row-${y}`} style={{ display: 'flex' }}>
               {row.map((cell, x) => {
-                let bgColor = '#2d3748';
-                if (cell.type === 'walkable') bgColor = '#4a5568';
+                let bgColor = '#36d1df';
+                if (cell.type === 'walkable') bgColor = '#8eea2bc8';
                 else if (cell.type === 'wall') bgColor = '#2d3748';
                 else if (cell.type === 'chargingStation') bgColor = '#38b2ac';
 

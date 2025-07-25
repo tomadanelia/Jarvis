@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchGridById, fetchGrids, setupSimulationApi } from '../services/apiService';
 import { useSimulationStore } from '../store/simulationStore';
-
 /**
  * GridSelector component.
  * 
@@ -74,9 +73,8 @@ export default function GridSelector() {
 
   return (
     <div>
-      <label htmlFor="grid-selector">Select a Grid:</label>
-      <select id="grid-selector" onChange={handleSelect} disabled={loading}>
-        <option value="">-- Choose Grid --</option>
+      <select id="grid-selector" className="grid-selector" onChange={handleSelect} disabled={loading}>
+        <option value="">Choose Grid</option>
         {availableGrids.map((grid) => (
           <option key={grid.id} value={grid.id}>
             {grid.name}

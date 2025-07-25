@@ -33,17 +33,16 @@ export default function StrategySelector() {
   };
 
   return (
-    <div style={{ marginTop: '1rem' }}>
-      <label htmlFor="strategy-selector" style={{ marginRight: '0.5rem' }}>
-        Select Assignment Strategy:
-      </label>
+    <div >
+     
       <select
         id="strategy-selector"
+        className='strategy-selector'
         onChange={handleChange}
         value={selectedStrategy || ''}
         disabled={loading}
       >
-        <option value="">-- Choose Strategy --</option>
+        <option value="">Choose Strategy</option>
         <option value="nearest">Nearest Available Robot</option>
         <option value="round-robin">Round-Robin</option>
       </select>

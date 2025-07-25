@@ -24,9 +24,8 @@ export default function SimulationStatusDisplay() {
 
   return (
     <div className="simulation-status-display">
-      <h2>Simulation Status</h2>
-      <p>Status: {simulationStatus}</p>
-      <p>Time: {simulationTime} seconds</p>
+      <p><span className='statusp'>Status:</span> {simulationStatus}</p>
+      <p><span className='timep'>Time:</span> {simulationTime}</p>
     </div>
   );
 };
